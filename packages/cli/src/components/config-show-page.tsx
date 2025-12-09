@@ -7,7 +7,7 @@ import LoadingMessage from "./loading-message";
 
 const ConfigShowPage = () => {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
   const configManager = useContext(ConfigContext);
   const { quit } = useContext(QuitContext);
@@ -28,7 +28,7 @@ const ConfigShowPage = () => {
         }
       } catch (e) {
         if (!signal.aborted) {
-          setError(e as Error);
+          setError(e instanceof Error ? e.message : String(e));
         }
       } finally {
         if (!signal.aborted) {
@@ -50,7 +50,7 @@ const ConfigShowPage = () => {
 
   if (error) {
     return (
-      <Text color="red">Error loading configuration: {error.message}</Text>
+      <Text color="red">Error loading configuration: {error}</Text>
     );
   };
 

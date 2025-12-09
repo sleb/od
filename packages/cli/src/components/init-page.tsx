@@ -10,7 +10,7 @@ type OverwriteSelection = { value: boolean; };
 const InitPage = () => {
   const [configExists, setConfigExists] = useState(false);
   const [overwrite, setOverwrite] = useState<OverwriteSelection | null>(null);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const { quit } = useContext(QuitContext);
@@ -53,7 +53,7 @@ const InitPage = () => {
         }
       } catch (err) {
         if (!signal.aborted) {
-          setError(err as Error);
+          setError(err instanceof Error ? err.message : String(err));
         }
       } finally {
         if (!signal.aborted) {
@@ -90,7 +90,7 @@ const InitPage = () => {
 
   if (error) {
     return (
-      <Text color="red">Error initializing configuration: {error.message}</Text>
+      <Text color="red">Error initializing configuration: {error}</Text>
     );
   }
 
