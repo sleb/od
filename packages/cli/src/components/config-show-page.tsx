@@ -1,9 +1,9 @@
+import type { Config } from "@overdrip/core";
 import { Box, Text } from "ink";
 import SyntaxHighlight from "ink-syntax-highlight";
 import { useContext, useEffect, useState } from "react";
 import { ConfigContext } from "../context/config-context";
 import { QuitContext } from "../context/quit-context";
-import type { Config } from "../models/config";
 import LoadingMessage from "./loading-message";
 
 const ConfigShowPage = () => {

@@ -1,9 +1,9 @@
+import { LocalConfigManager } from "@overdrip/core";
 import { render, useApp } from "ink";
 import { useState } from "react";
 import ConfigShowPage from "./components/config-show-page";
 import InitPage from "./components/init-page";
 import Layout from "./components/layout";
-import { LocalConfigManager } from "./config-manager";
 import { ConfigContext } from "./context/config-context";
 import { QuitContext } from "./context/quit-context";
 

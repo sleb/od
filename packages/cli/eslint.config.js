@@ -1,18 +1,21 @@
-import js from "@eslint/js";
+import sharedEslintConfig from "@overdrip/eslint";
+import reactPlugin from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
-import { defineConfig, globalIgnores } from "eslint/config";
+import { defineConfig } from "eslint/config";
 import globals from "globals";
-import tslint from "typescript-eslint";
 
 export default defineConfig([
-  globalIgnores(["dist"]),
+  ...sharedEslintConfig,
+  reactPlugin.configs.flat.recommended,
+  reactPlugin.configs.flat["jsx-runtime"],
+  reactHooks.configs.flat.recommended,
   {
     files: ["**/*.{ts,tsx}"],
-    extends: [
-      js.configs.recommended,
-      tslint.configs.recommended,
-      reactHooks.configs.flat.recommended,
-    ],
-    languageOptions: { globals: globals.node }
+    languageOptions: { globals: globals.node },
+    settings: {
+      react: {
+        version: "detect", // Automatically detects the version
+      },
+    }
   },
 ]);

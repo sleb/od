@@ -5,10 +5,10 @@
     "drip": "./src/index.ts"
   },
   "scripts": {
-    "lint": "eslint ./src"
+    "lint": "eslint ./src",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
     "@types/bun": "latest",
     "@types/react": "^19.2.7",
     "@types/yargs": "^17.0.35",
@@ -16,12 +16,13 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "typescript-eslint": "^8.49.0"
+    "@overdrip/eslint": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "dependencies": {
+    "@overdrip/core": "workspace:*",
     "ink": "^6.5.1",
     "ink-big-text": "^2.0.0",
     "ink-gradient": "^3.0.0",
@@ -29,7 +30,6 @@
     "ink-spinner": "^5.0.0",
     "ink-syntax-highlight": "^2.0.2",
     "react": "^19.2.1",
-    "yargs": "^18.0.0",
-    "zod": "^4.1.13"
+    "yargs": "^18.0.0"
   }
 }

@@ -1,6 +1,12 @@
 import { file, write } from "bun";
-import { ConfigSchema, type Config } from "./models/config";
+import z from "zod";
 
+export const ConfigSchema = z.object({
+  deviceId: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
 export interface ConfigManager {
   path(): string;
   loadConfig(): Promise<Config>;

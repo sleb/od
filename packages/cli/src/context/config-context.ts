@@ -1,5 +1,5 @@
+import type { ConfigManager } from "@overdrip/core";
 import { createContext } from "react";
-import type { ConfigManager } from "../config-manager";
 
 const notInitialized = () => {
   throw new Error("ConfigManager method not initialized ");
