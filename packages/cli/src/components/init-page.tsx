@@ -1,7 +1,7 @@
 import { Box, Text } from "ink";
 import SelectInput from "ink-select-input";
 import { useContext, useEffect, useState } from "react";
-import { ConfigContext } from "../config-context";
+import { ConfigContext } from "../context/config-context";
 import { QuitContext } from "../context/quit-context";
 import LoadingMessage from "./loading-message";
 

@@ -3,8 +3,8 @@ import { useState } from "react";
 import ConfigShowPage from "./components/config-show-page";
 import InitPage from "./components/init-page";
 import Layout from "./components/layout";
-import { ConfigContext } from "./config-context";
 import { LocalConfigManager } from "./config-manager";
+import { ConfigContext } from "./context/config-context";
 import { QuitContext } from "./context/quit-context";
 
 export const Pages = ["init", "config-show"] as const;

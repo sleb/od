@@ -1,6 +1,7 @@
-import { Text } from "ink";
+import { Box, Text } from "ink";
+import SyntaxHighlight from "ink-syntax-highlight";
 import { useContext, useEffect, useState } from "react";
-import { ConfigContext } from "../config-context";
+import { ConfigContext } from "../context/config-context";
 import { QuitContext } from "../context/quit-context";
 import type { Config } from "../models/config";
 import LoadingMessage from "./loading-message";
@@ -61,7 +62,10 @@ const ConfigShowPage = () => {
   }
 
   return (
-    <Text>{JSON.stringify(config, null, 2)}</Text>
+    <Box flexDirection="column">
+      <Text bold>Configuration ({configManager.path()}):</Text>
+      <SyntaxHighlight language="json" code={JSON.stringify(config, null, 2)} />
+    </Box>
   );
 };
 

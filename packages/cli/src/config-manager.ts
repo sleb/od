@@ -2,6 +2,7 @@ import { file, write } from "bun";
 import { ConfigSchema, type Config } from "./models/config";
 
 export interface ConfigManager {
+  path(): string;
   loadConfig(): Promise<Config>;
   saveConfig(config: Config): Promise<void>;
   configExists(): Promise<boolean>;
@@ -9,6 +10,10 @@ export interface ConfigManager {
 
 export class LocalConfigManager implements ConfigManager {
   constructor(private configPath: string) { }
+
+  path() {
+    return this.configPath;
+  }
 
   async loadConfig() {
     try {
