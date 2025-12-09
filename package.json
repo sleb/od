@@ -1,0 +1,6 @@
+{
+  "name": "overdrip",
+  "workspaces": [
+    "packages/*"
+  ]
+}
