@@ -3,7 +3,7 @@ import BigText from "ink-big-text";
 import Gradient from "ink-gradient";
 import { useContext, type ReactNode } from "react";
 import { QuitContext } from "../context/quit-context";
-import StatusMessage from "./status-message";
+import QuitMessage from "./quit-message";
 
 type Props = { children: ReactNode; };
 const Layout = ({ children }: Props) => {
@@ -21,7 +21,7 @@ const Layout = ({ children }: Props) => {
         <BigText text="Overdrip" font="tiny" />
       </Gradient>
       {children}
-      <StatusMessage />
+      <QuitMessage />
     </Box>
   );
 };

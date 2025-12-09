@@ -1,52 +1,75 @@
-import { file } from "bun";
 import { Box, Text } from "ink";
 import SelectInput from "ink-select-input";
-import Spinner from "ink-spinner";
 import { useContext, useEffect, useState } from "react";
-import { ConfigManager } from "../config-manager";
-import { ConfigPathContext } from "../config-path-context";
+import { ConfigContext } from "../config-context";
 import { QuitContext } from "../context/quit-context";
+import LoadingMessage from "./loading-message";
 
 type OverwriteSelection = { value: boolean; };
 
 const InitPage = () => {
-  const configPath = useContext(ConfigPathContext);
   const [configExists, setConfigExists] = useState(false);
   const [overwrite, setOverwrite] = useState<OverwriteSelection | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
   const [loading, setLoading] = useState(true);
   const { quit } = useContext(QuitContext);
+  const configManager = useContext(ConfigContext);
 
   const handleOverwriteSelect = (item: OverwriteSelection) => {
     setOverwrite(item);
-    quit();
   };
 
   useEffect(() => {
-    file(configPath).exists().then((exists) => {
-      setConfigExists(exists);
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    configManager.configExists().then((exists) => {
+      if (!signal.aborted) {
+        setConfigExists(exists);
+      }
     }).finally(() => {
-      setLoading(false);
+      if (!signal.aborted) {
+        setLoading(false);
+      }
     });
-  }, [configPath]);
+
+    return () => controller.abort();
+  }, [configManager]);
 
   useEffect(() => {
-    if (!loading && (!configExists || overwrite)) {
-      new ConfigManager(configPath).saveConfig({ deviceId: "default-device", name: "My Overdrip Device" }).catch((err) => {
-        setError(err);
-      }).finally(() => {
-        quit();
-      });
-    }
-  }, [configExists, configPath, loading, overwrite, quit]);
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const persist = async () => {
+      if (loading) return;
+      if (configExists && !overwrite) return;
+
+      try {
+        const nextConfig = { deviceId: "default-device", name: "My Overdrip Device" };
+        await configManager.saveConfig(nextConfig);
+        if (!signal.aborted) {
+          setError(null);
+        }
+      } catch (err) {
+        if (!signal.aborted) {
+          setError(err as Error);
+        }
+      } finally {
+        if (!signal.aborted) {
+          quit();
+        }
+      }
+    };
+
+    persist();
+
+    return () => controller.abort();
+  }, [configExists, configManager, loading, overwrite, quit]);
 
   if (loading) {
     return (
-      <Text>
-        <Text color="blue"><Spinner type="dots" /></Text>
-        Checking configuration...
-      </Text>
+      <LoadingMessage message="Checking configuration..." />
     );
   }
 

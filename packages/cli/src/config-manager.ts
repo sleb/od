@@ -1,7 +1,13 @@
 import { file, write } from "bun";
 import { ConfigSchema, type Config } from "./models/config";
 
-export class ConfigManager {
+export interface ConfigManager {
+  loadConfig(): Promise<Config>;
+  saveConfig(config: Config): Promise<void>;
+  configExists(): Promise<boolean>;
+}
+
+export class LocalConfigManager implements ConfigManager {
   constructor(private configPath: string) { }
 
   async loadConfig() {
@@ -22,4 +28,4 @@ export class ConfigManager {
   async configExists() {
     return await file(this.configPath).exists();
   }
-}
+};

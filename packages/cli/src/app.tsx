@@ -1,33 +1,46 @@
 import { render, useApp } from "ink";
 import { useState } from "react";
+import ConfigShowPage from "./components/config-show-page";
 import InitPage from "./components/init-page";
 import Layout from "./components/layout";
-import { ConfigPathContext } from "./config-path-context";
+import { ConfigContext } from "./config-context";
+import { LocalConfigManager } from "./config-manager";
 import { QuitContext } from "./context/quit-context";
 
-type Page = "init";
+export const Pages = ["init", "config-show"] as const;
+export type Page = (typeof Pages)[number];
 
 type Props = { page: Page; configPath: string; };
 const App = ({ page, configPath }: Props) => {
   const [shouldQuit, setShouldQuit] = useState(false);
-  const app = useApp();
+  const { exit } = useApp();
 
   const quit = () => {
     setShouldQuit(true);
     setTimeout(() => {
-      app.exit();
-    }, 500);
+      exit();
+    }, 100);
   };
 
+  const route = () => {
+    switch (page) {
+      case "init":
+        return <InitPage />;
+      case "config-show":
+        return <ConfigShowPage />;
+      default:
+        throw new Error(`Unknown page: ${page}`);
+    }
+  };
 
   return (
-    <ConfigPathContext value={configPath}>
+    <ConfigContext value={new LocalConfigManager(configPath)}>
       <QuitContext value={{ shouldQuit, quit }}>
         <Layout>
-          {page === "init" && <InitPage />}
+          {route()}
         </Layout>
       </QuitContext>
-    </ConfigPathContext>
+    </ConfigContext>
   );
 };
 
