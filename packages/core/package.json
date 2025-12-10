@@ -17,6 +17,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@overdrip/functions": "workspace:*",
     "firebase": "^12.6.0",
     "zod": "^4.1.13"
   }

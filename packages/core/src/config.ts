@@ -1,9 +1,9 @@
 import { file, write } from "bun";
 import z from "zod";
+import { DeviceRegistrationSchema } from "./device";
 
 export const ConfigSchema = z.object({
-  deviceId: z.string().min(1),
-  name: z.string().min(1),
+  device: DeviceRegistrationSchema,
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -15,7 +15,7 @@ export interface ConfigManager {
 }
 
 export class LocalConfigManager implements ConfigManager {
-  constructor(private configPath: string) { }
+  constructor(private configPath: string) {}
 
   path() {
     return this.configPath;
@@ -39,4 +39,4 @@ export class LocalConfigManager implements ConfigManager {
   async configExists() {
     return await file(this.configPath).exists();
   }
-};
+}
