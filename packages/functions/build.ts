@@ -15,7 +15,7 @@ const build = async (): Promise<void> => {
     format: "cjs",
     sourcemap: true,
     minify: true,
-    env: "inline"
+    env: "inline",
   });
 
   if (!result.success) {

@@ -1,5 +1,7 @@
 import { logIn } from "@overdrip/core";
+import { Box, Text } from "ink";
 import { Form, type FormStructure } from "ink-form";
+import { useState } from "react";
 import { z } from "zod";
 
 const FormSchema = z.object({
@@ -8,9 +10,13 @@ const FormSchema = z.object({
 });
 
 const LoginForm = () => {
+  const [error, setError] = useState<string | null>(null);
+
   const handleLogin = (form: object) => {
     const { email, password } = FormSchema.parse(form);
-    logIn(email, password).catch(console.error);
+    logIn(email, password).catch((e) => {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    });
   };
 
   const form: FormStructure = {
@@ -38,7 +44,12 @@ const LoginForm = () => {
     ],
   };
 
-  return <Form form={form} onSubmit={handleLogin} />;
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Form form={form} onSubmit={handleLogin} />
+      {error && <Text color="red">{error}</Text>}
+    </Box>
+  );
 };
 
 export default LoginForm;

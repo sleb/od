@@ -2,6 +2,7 @@ import { HttpsError, onCall } from "firebase-functions/https";
 import { error, info } from "firebase-functions/logger";
 import z from "zod";
 import { app } from "./firebase";
+import type { DeviceRegistration } from "./model";
 
 export const RegisterDeviceRequestSchema = z.object({
   name: z.string().min(1).max(100),
@@ -16,7 +17,6 @@ export type RegisterDeviceRequest = z.infer<typeof RegisterDeviceRequestSchema>;
 export type RegisterDeviceResponse = z.infer<
   typeof RegisterDeviceResponseSchema
 >;
-type DeviceRegistration = { name: string; authToken: string };
 
 export const registerDevice = onCall<
   RegisterDeviceRequest,
@@ -36,6 +36,7 @@ export const registerDevice = onCall<
   const device: DeviceRegistration = {
     name,
     authToken: crypto.randomUUID(),
+    registeredAt: new Date().toISOString(),
   };
 
   try {
