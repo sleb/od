@@ -19,6 +19,7 @@ const DeviceRegistrationForm = ({ onSubmit, defaultValues }: Props) => {
             placeholder: "My Device",
             initialValue: defaultValues?.name,
             type: "string",
+            required: true,
           },
         ],
       },

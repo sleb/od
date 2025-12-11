@@ -23,6 +23,7 @@ const LoginForm = () => {
             label: "Email",
             placeholder: "foo@bar.com",
             type: "string",
+            required: true,
           },
           {
             name: "password",
@@ -30,6 +31,7 @@ const LoginForm = () => {
             placeholder: "password",
             type: "string",
             mask: "*",
+            required: true,
           },
         ],
       },

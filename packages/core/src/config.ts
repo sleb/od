@@ -27,7 +27,7 @@ export class LocalConfigManager implements ConfigManager {
       const parsed = JSON.parse(data);
       return ConfigSchema.parse(parsed);
     } catch (e) {
-      throw new Error("Failed to load or parse config", { cause: e });
+      throw new Error(`Failed to load or parse config: ${e}`, { cause: e });
     }
   }
 
