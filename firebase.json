@@ -7,7 +7,7 @@
   },
   "functions": [
     {
-      "source": "./packages/functions",
+      "source": "./packages/functions/lib",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
@@ -19,8 +19,10 @@
         "src"
       ],
       "predeploy": [
-        "cd \"$RESOURCE_DIR\" && bun run lint",
-        "cd \"$RESOURCE_DIR\" && bun run build"
+        "cd \"$RESOURCE_DIR\"/.. && bun run lint",
+        "cd \"$RESOURCE_DIR\"/.. && bun run build",
+        "pwd",
+        "cd \"$RESOURCE_DIR\"/.. && cp ./dummy-package.json \"$RESOURCE_DIR\"/package.json"
       ]
     }
   ],
