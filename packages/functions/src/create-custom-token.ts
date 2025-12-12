@@ -14,7 +14,14 @@ export const createCustomToken = onRequest(async (req, res) => {
     return;
   }
 
-  const { id, authToken } = CreateCustomTokenRequestSchema.parse(req.body);
+  const result = CreateCustomTokenRequestSchema.safeParse(req.body);
+  if (!result.success) {
+    error({ message: "Invalid request", error: result.error });
+    res.status(400).send("Invalid request");
+    return;
+  }
+
+  const { id, authToken } = result.data;
   const devices = await app
     .firestore()
     .collectionGroup("devices")
