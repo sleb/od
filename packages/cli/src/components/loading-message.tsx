@@ -1,13 +1,15 @@
-import { Text } from "ink";
+import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
 
-type Props = { message: string; };
+type Props = { message: string };
 const LoadingMessage = ({ message }: Props) => {
   return (
-    <Text>
-      <Text color="blue"><Spinner type="dots" /></Text>
-      {message}
-    </Text>
+    <Box gap={1}>
+      <Text>{message}</Text>
+      <Text color="blue">
+        <Spinner type="dots" />
+      </Text>
+    </Box>
   );
 };
 

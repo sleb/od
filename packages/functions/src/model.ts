@@ -19,6 +19,7 @@ export type RegisterDeviceResponse = z.infer<
 >;
 
 export const DeviceRegistrationSchema = z.object({
+  id: DeviceId,
   name: DeviceName,
   authToken: AuthToken,
   registeredAt: z.iso.datetime(),

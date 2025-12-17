@@ -1,20 +1,22 @@
-import { cp, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 
 const build = async (): Promise<void> => {
-  console.log("🏗️  Building Overdrip functions...");
+  console.log("🏗️  Building Overdrip CLI...");
 
-  const outdir = "lib";
+  const outdir = "dist";
   console.log(`  🧹 Cleaning output directory "${outdir}"...`);
   await rm(outdir, { recursive: true, force: true });
 
-  console.log("  🛠️  Compiling source files...");
+  console.log("  👨‍💻 Compiling source files...");
   const result = await Bun.build({
     entrypoints: ["src/index.ts"],
-    outdir: "lib",
-    target: "node",
-    format: "cjs",
+    outdir,
+    target: "bun",
     sourcemap: true,
     minify: true,
+    define: {
+      NODE_ENV: "production",
+    },
     env: "inline",
   });
 
@@ -27,13 +29,8 @@ const build = async (): Promise<void> => {
   for (const output of result.outputs) {
     console.log(`  📦 Created: ${output.path}`);
   }
-
-  console.log("\n📋 Copying `package.json`...")
-  await cp("./dummy-package.json", "./lib/package.json");
-  console.log("  📦 Created: lib/package.json");
 };
 
-// Run if called directly
 if (import.meta.main) {
   build().catch((error) => {
     console.error("Build script failed:", error);

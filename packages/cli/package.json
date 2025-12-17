@@ -6,9 +6,11 @@
   },
   "scripts": {
     "lint": "eslint ./src",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "bun run ./build.ts"
   },
   "devDependencies": {
+    "@overdrip/eslint": "workspace:*",
     "@types/bun": "latest",
     "@types/react": "^19.2.7",
     "@types/yargs": "^17.0.35",
@@ -16,7 +18,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "@overdrip/eslint": "workspace:*"
+    "react-devtools-core": "^7.0.1"
   },
   "peerDependencies": {
     "typescript": "^5"

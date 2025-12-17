@@ -25,8 +25,10 @@ export const createCustomToken = onRequest(async (req, res) => {
   const devices = await app
     .firestore()
     .collectionGroup("devices")
-    .where("deviceId", "==", id)
+    .where("id", "==", id)
     .get();
+
+  console.log(devices);
   const deviceRef = devices.docs[0];
   if (!deviceRef?.exists) {
     error({ message: "Device not found", id });

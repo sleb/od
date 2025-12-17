@@ -1,0 +1,15 @@
+{
+  "name": "@overdrip/app",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "eslint": "^9.39.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@overdrip/eslint": "workspace:*",
+    "@overdrip/core": "workspace:*"
+  }
+}

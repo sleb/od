@@ -6,7 +6,7 @@ import {
 import { httpsCallable } from "firebase/functions";
 import z from "zod";
 import { CreateCustomTokenResponseSchema } from "../../functions/src/model";
-import { functions } from "./firebase";
+import { CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
 
 const registerDeviceCallable = httpsCallable<
   RegisterDeviceRequest,
@@ -34,19 +34,29 @@ export const createCustomToken = async (
   deviceId: string,
   authToken: string,
 ): Promise<string> => {
-  const response = await fetch(
-    "http://127.0.0.1:5001/overdrip-daaac/us-central1/createCustomToken",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id: deviceId, authToken }),
+  const response = await fetch(CREATE_CUSTOM_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({ id: deviceId, authToken }),
+  });
 
-  const { customToken } = CreateCustomTokenResponseSchema.parse(
+  if (!response.ok) {
+    throw new Error(
+      `Failed to create custom token: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const result = CreateCustomTokenResponseSchema.safeParse(
     await response.json(),
   );
-  return customToken;
+
+  if (!result.success) {
+    throw new Error(
+      `Failed to create custom token: ${JSON.stringify(result.error.issues)}`,
+    );
+  }
+
+  return result.data.customToken;
 };

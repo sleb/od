@@ -5,11 +5,12 @@ import ConfigShowPage from "./components/config-show-page";
 import InitPage from "./components/init-page";
 import Layout from "./components/layout";
 import LoadingMessage from "./components/loading-message";
+import StartPage from "./components/start-page";
 import { ConfigContext } from "./context/config-context";
 import { QuitContext } from "./context/quit-context";
 import { UserContext } from "./context/user-context";
 
-export const Pages = ["init", "config-show"] as const;
+export const Pages = ["init", "config-show", "start"] as const;
 export type Page = (typeof Pages)[number];
 
 type Props = { page: Page; configPath: string };
@@ -32,6 +33,8 @@ const App = ({ page, configPath }: Props) => {
         return <InitPage />;
       case "config-show":
         return <ConfigShowPage />;
+      case "start":
+        return <StartPage />;
     }
   };
 

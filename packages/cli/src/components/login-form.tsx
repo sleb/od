@@ -1,4 +1,4 @@
-import { logIn } from "@overdrip/core";
+import { logInUser } from "@overdrip/core";
 import { Box, Text } from "ink";
 import { Form, type FormStructure } from "ink-form";
 import { useState } from "react";
@@ -14,7 +14,7 @@ const LoginForm = () => {
 
   const handleLogin = (form: object) => {
     const { email, password } = FormSchema.parse(form);
-    logIn(email, password).catch((e) => {
+    logInUser(email, password).catch((e) => {
       setError(e instanceof Error ? e.message : "Unknown error");
     });
   };

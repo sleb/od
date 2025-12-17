@@ -1,6 +1,11 @@
 import { FirebaseError } from "firebase/app";
-import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithCustomToken,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
 import z from "zod";
+import { createCustomToken } from "./device";
 import { auth } from "./firebase";
 
 export const UserSchema = z.object({
@@ -9,27 +14,56 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-export const onAuthChange = (next: (user: User | null) => void, err: (error: Error) => void): Promise<void> => {
-  onAuthStateChanged(auth, (firebaseUser) => {
-    if (firebaseUser) {
-      next({ uid: firebaseUser.uid });
-    } else {
-      next(null);
-    }
-  }, err);
+export const onAuthChange = (
+  next: (user: User | null) => void,
+  err: (error: Error) => void,
+): Promise<void> => {
+  onAuthStateChanged(
+    auth,
+    (firebaseUser) => {
+      if (firebaseUser) {
+        next({ uid: firebaseUser.uid });
+      } else {
+        next(null);
+      }
+    },
+    err,
+  );
 
   return auth.authStateReady();
 };
 
-export const logIn = async (email: string, password: string) => {
+export const logInUser = async (email: string, password: string) => {
   try {
-    const {user: {uid} } = await signInWithEmailAndPassword(auth, email, password);
-    console.log('User logged in:', uid);
+    const {
+      user: { uid },
+    } = await signInWithEmailAndPassword(auth, email, password);
+    console.log("User logged in:", uid);
   } catch (error) {
     if (error instanceof FirebaseError) {
-      throw new Error(`Firebase auth error: ${error.message}, code: ${error.code}`);
+      throw new Error(
+        `Firebase auth error: ${error.message}, code: ${error.code}`,
+      );
     }
 
     throw new Error(`Error logging in: ${error}`);
+  }
+};
+
+export const logInDevice = async (
+  deviceId: string,
+  authCode: string,
+): Promise<void> => {
+  try {
+    const token = await createCustomToken(deviceId, authCode);
+    await signInWithCustomToken(auth, token);
+  } catch (err) {
+    if (err instanceof FirebaseError) {
+      throw new Error(
+        `Error logging in device: ${err.message}, code: ${err.code}`,
+      );
+    }
+
+    throw new Error(`Error logging in device: ${err}`);
   }
 };

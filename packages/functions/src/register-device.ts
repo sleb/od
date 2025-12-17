@@ -33,19 +33,24 @@ export const registerDevice = onCall<
   const { name } = RegisterDeviceRequestSchema.parse(req.data);
   info(`Registering device with name: ${name} for user: ${uid}`);
 
-  const device: DeviceRegistration = {
-    name,
-    authToken: crypto.randomUUID(),
-    registeredAt: new Date().toISOString(),
-  };
 
   try {
-    const { id } = await app
+    const deviceRef = app
       .firestore()
       .collection(`users/${uid}/devices`)
-      .add(device);
+      .doc();
 
-    return { id, ...device };
+    const device: DeviceRegistration = {
+      id: deviceRef.id,
+      name,
+      authToken: crypto.randomUUID(),
+      registeredAt: new Date().toISOString(),
+    };
+
+    await deviceRef.set(device);
+    info(`Device registered with ID: ${device.id} for user: ${uid}`);
+
+    return device;
   } catch (err) {
     error({ message: "Failed to register device", err });
     throw new HttpsError("internal", "Failed to register device.");

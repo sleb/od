@@ -10,7 +10,7 @@ const firebaseConfig = {
   storageBucket: process.env.OVERDRIP_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.OVERDRIP_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.OVERDRIP_FIREBASE_APP_ID,
-  measurementId: process.env.OVERDRIP_FIREBASE_MEASUREMENT_ID
+  measurementId: process.env.OVERDRIP_FIREBASE_MEASUREMENT_ID,
 };
 
 export const app = initializeApp(firebaseConfig);
@@ -18,12 +18,22 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
 
-const isProd =
-  process.env.NODE_ENV === "production" ||
-  process.env.OVERDRIP_ENV === "production";
-
-if (!isProd) {
+if (process.env.NODE_ENV !== "production") {
   connectAuthEmulator(auth, "http://localhost:9099");
   connectFirestoreEmulator(db, "localhost", 8080);
   connectFunctionsEmulator(functions, "localhost", 5001);
 }
+
+const CREATE_CUSTOM_TOKEN_URL_ENV = "OVERDRIP_FIREBASE_CREATE_CUSTOM_TOKEN_URL";
+
+const getCreateCustomTokenUrl = () => {
+  const url = process.env[CREATE_CUSTOM_TOKEN_URL_ENV];
+  if (!url) {
+    throw new Error(
+      `Environment variable ${CREATE_CUSTOM_TOKEN_URL_ENV} is not set`,
+    );
+  }
+  return url;
+};
+
+export const CREATE_CUSTOM_TOKEN_URL = getCreateCustomTokenUrl();

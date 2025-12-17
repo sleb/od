@@ -20,9 +20,7 @@
       ],
       "predeploy": [
         "cd \"$RESOURCE_DIR\"/.. && bun run lint",
-        "cd \"$RESOURCE_DIR\"/.. && bun run build",
-        "pwd",
-        "cd \"$RESOURCE_DIR\"/.. && cp ./dummy-package.json \"$RESOURCE_DIR\"/package.json"
+        "cd \"$RESOURCE_DIR\"/.. && bun run build"
       ]
     }
   ],
