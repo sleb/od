@@ -15,7 +15,7 @@ const LoginForm = () => {
   const handleLogin = (form: object) => {
     const { email, password } = FormSchema.parse(form);
     logInUser(email, password).catch((e) => {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      setError(e instanceof Error ? e.message : String(e));
     });
   };
 

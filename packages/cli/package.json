@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@overdrip/core": "workspace:*",
+    "@overdrip/app": "workspace:*",
     "ink": "^6.5.1",
     "ink-big-text": "^2.0.0",
     "ink-form": "^2.0.1",

@@ -25,6 +25,7 @@
         "drip": "./src/index.ts",
       },
       "dependencies": {
+        "@overdrip/app": "workspace:*",
         "@overdrip/core": "workspace:*",
         "ink": "^6.5.1",
         "ink-big-text": "^2.0.0",

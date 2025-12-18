@@ -1,6 +1,12 @@
 {
   "name": "@overdrip/app",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "eslint": "^9.39.1"
