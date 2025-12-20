@@ -7,7 +7,7 @@ import {
   DeviceConfigSchema,
 } from "@overdrip/core";
 import { signInWithCustomToken } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore";
 import pino from "pino";
 import {
   HardwareFactory,
@@ -232,17 +232,16 @@ class App implements Overdrip {
     }
 
     const deviceId = this.config.device.id;
-    const readingRef = doc(
+    const readingsCollectionRef = collection(
       db,
       "users",
       userId,
       "devices",
       deviceId,
       "readings",
-      `${Date.now()}`,
     );
 
-    await setDoc(readingRef, {
+    await addDoc(readingsCollectionRef, {
       type: "moisture",
       value: moistureLevel,
       timestamp: new Date().toISOString(),
@@ -259,17 +258,16 @@ class App implements Overdrip {
     }
 
     const deviceId = this.config.device.id;
-    const actionRef = doc(
+    const actionsCollectionRef = collection(
       db,
       "users",
       userId,
       "devices",
       deviceId,
       "actions",
-      `${Date.now()}`,
     );
 
-    await setDoc(actionRef, {
+    await addDoc(actionsCollectionRef, {
       type: "watering",
       durationMs,
       timestamp: new Date().toISOString(),

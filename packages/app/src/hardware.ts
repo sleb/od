@@ -39,9 +39,15 @@ export interface WaterPump {
  * Returns random values between 20-80%.
  */
 export class MockMoistureSensor implements MoistureSensor {
+  private static readonly MOCK_MOISTURE_MIN = 20;
+  private static readonly MOCK_MOISTURE_RANGE = 60;
+
   async readMoisture(): Promise<number> {
     // Simulate sensor reading with random value
-    return Math.floor(Math.random() * 60) + 20;
+    return (
+      Math.floor(Math.random() * MockMoistureSensor.MOCK_MOISTURE_RANGE) +
+      MockMoistureSensor.MOCK_MOISTURE_MIN
+    );
   }
 }
 
