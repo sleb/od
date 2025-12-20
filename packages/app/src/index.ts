@@ -32,6 +32,14 @@ class App implements Overdrip {
   }
 
   async start() {
+    // TODO: design and implement application Overdrip device runtime
+    // - authenticate with custom token
+    // - read configuration from Firestore
+    // - start main application loop
+    //   - check moisture sensor readings
+    //   - trigger watering actions via attached pumps/relays
+    //   - log actions and sensor readings to the Google Cloud monitoring API
+    //   - sleep until next interval
     this.logger.info("Starting Overdrip application...");
   }
 }
