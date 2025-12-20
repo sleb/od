@@ -2,13 +2,13 @@ import { Box, Text, useInput } from "ink";
 import BigText from "ink-big-text";
 import Gradient from "ink-gradient";
 import { useContext, type ReactNode } from "react";
-import { QuitContext } from "../context/quit-context";
 import { UserContext } from "../context/user-context";
+import { useQuit } from "../hooks/quit-hook";
 import QuitMessage from "./quit-message";
 
 type Props = { children: ReactNode };
 const Layout = ({ children }: Props) => {
-  const { quit } = useContext(QuitContext);
+  const quit = useQuit();
   const user = useContext(UserContext);
 
   useInput((input, key) => {

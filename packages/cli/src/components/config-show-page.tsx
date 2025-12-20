@@ -1,17 +1,17 @@
 import type { Config } from "@overdrip/core";
 import { Box, Text } from "ink";
 import SyntaxHighlight from "ink-syntax-highlight";
-import { useContext, useEffect, useState } from "react";
-import { ConfigContext } from "../context/config-context";
-import { QuitContext } from "../context/quit-context";
+import { useEffect, useState } from "react";
+import { useConfig } from "../hooks/config-hook";
+import { useQuit } from "../hooks/quit-hook";
 import LoadingMessage from "./loading-message";
 
 const ConfigShowPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState<Config | null>(null);
-  const configManager = useContext(ConfigContext);
-  const { quit } = useContext(QuitContext);
+  const configManager = useConfig();
+  const quit = useQuit();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -44,20 +44,19 @@ const ConfigShowPage = () => {
   }, [configManager, quit]);
 
   if (loading) {
-    return (
-      <LoadingMessage message="Loading configuration..." />
-    );
+    return <LoadingMessage message="Loading configuration..." />;
   }
 
   if (error) {
-    return (
-      <Text color="red">Error loading configuration: {error}</Text>
-    );
-  };
+    return <Text color="red">Error loading configuration: {error}</Text>;
+  }
 
   if (!config) {
     return (
-      <Text color="yellow">No configuration file found. Please run the `init` command to create one.</Text>
+      <Text color="yellow">
+        No configuration file found. Please run the `init` command to create
+        one.
+      </Text>
     );
   }
 

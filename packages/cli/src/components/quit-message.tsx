@@ -1,9 +1,8 @@
 import { Box, Text } from "ink";
-import { useContext } from "react";
-import { QuitContext } from "../context/quit-context";
+import { useQuit } from "../hooks/quit-hook";
 
 const QuitMessage = () => {
-  const { shouldQuit } = useContext(QuitContext);
+  const { shouldQuit } = useQuit();
   const message = shouldQuit ? "" : "Press `Q` or `Esc` to quit.";
 
   return (

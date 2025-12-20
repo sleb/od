@@ -15,7 +15,8 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@overdrip/core": "workspace:*",
     "@overdrip/eslint": "workspace:*",
-    "@overdrip/core": "workspace:*"
+    "pino": "^10.1.0"
   }
 }

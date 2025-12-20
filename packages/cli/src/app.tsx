@@ -10,8 +10,14 @@ import { ConfigContext } from "./context/config-context";
 import { QuitContext } from "./context/quit-context";
 import { UserContext } from "./context/user-context";
 
-export const Pages = ["init", "config-show", "start"] as const;
-export type Page = (typeof Pages)[number];
+export type StartPageOptions = {
+  detach: boolean;
+};
+
+export type Page =
+  | { name: "init" }
+  | { name: "config-show" }
+  | { name: "start"; options: StartPageOptions };
 
 type Props = { page: Page; configPath: string };
 const App = ({ page, configPath }: Props) => {
@@ -28,13 +34,13 @@ const App = ({ page, configPath }: Props) => {
   };
 
   const route = () => {
-    switch (page) {
+    switch (page.name) {
       case "init":
         return <InitPage />;
       case "config-show":
         return <ConfigShowPage />;
       case "start":
-        return <StartPage />;
+        return <StartPage options={page.options} />;
     }
   };
 

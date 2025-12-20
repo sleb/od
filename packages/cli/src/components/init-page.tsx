@@ -4,10 +4,10 @@ import {
   registerDevice,
 } from "@overdrip/core";
 import { Text } from "ink";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import z from "zod";
-import { ConfigContext } from "../context/config-context";
-import { QuitContext } from "../context/quit-context";
+import { useConfig } from "../hooks/config-hook";
+import { useQuit } from "../hooks/quit-hook";
 import ConfigOverwriteForm from "./config-overwrite-form";
 import DeviceRegistrationForm from "./device-registration-form";
 import LoadingMessage from "./loading-message";
@@ -26,8 +26,8 @@ const InitPage = () => {
   const [overwrite, setOverwrite] = useState<OverwriteSelection | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { quit } = useContext(QuitContext);
-  const configManager = useContext(ConfigContext);
+  const quit = useQuit();
+  const configManager = useConfig();
 
   const handleDeviceRegistrationSubmit = async (values: object) => {
     const { name } = DeviceRegistrationFormSchema.parse(values);

@@ -1,15 +1,15 @@
 import { logInDevice } from "@overdrip/core";
 import { Text } from "ink";
 import { useContext, useEffect, useState, type ReactNode } from "react";
-import { ConfigContext } from "../context/config-context";
 import { UserContext } from "../context/user-context";
+import { useConfig } from "../hooks/config-hook";
 import { useQuit } from "../hooks/quit-hook";
 import LoadingMessage from "./loading-message";
 
 type Props = { children: ReactNode };
 const DeviceAuthRequired = ({ children }: Props) => {
   const [error, setError] = useState<string | null>(null);
-  const configManager = useContext(ConfigContext);
+  const configManager = useConfig();
   const user = useContext(UserContext);
   const quit = useQuit();
 
