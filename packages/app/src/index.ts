@@ -258,7 +258,7 @@ class App implements Overdrip {
     } catch (error) {
       this.logger.warn(
         { error },
-        "Cannot log sensor reading: user not authenticated",
+        "Failed to log sensor reading to Firestore",
       );
     }
   }
@@ -286,7 +286,7 @@ class App implements Overdrip {
     } catch (error) {
       this.logger.warn(
         { error },
-        "Cannot log watering action: user not authenticated",
+        "Failed to log watering action to Firestore",
       );
     }
   }
