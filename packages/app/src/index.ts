@@ -7,7 +7,14 @@ import {
   DeviceConfigSchema,
 } from "@overdrip/core";
 import { signInWithCustomToken } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import pino from "pino";
 import {
   HardwareFactory,
@@ -26,6 +33,7 @@ class App implements Overdrip {
   private moistureSensor: MoistureSensor;
   private waterPump: WaterPump;
   private deviceConfig: DeviceConfig | null = null;
+  private static readonly ERROR_RETRY_DELAY_MS = 5000;
 
   constructor(private config: Config) {
     this.logger = pino({
@@ -156,7 +164,7 @@ class App implements Overdrip {
       } catch (error) {
         this.logger.error({ error }, "Error in main loop");
         // Continue running even if there's an error
-        await this.sleep(5000); // Short delay before retry
+        await this.sleep(App.ERROR_RETRY_DELAY_MS);
       }
     }
 
@@ -244,7 +252,7 @@ class App implements Overdrip {
     await addDoc(readingsCollectionRef, {
       type: "moisture",
       value: moistureLevel,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
     });
 
     this.logger.debug({ moistureLevel }, "Sensor reading logged to Firestore");
@@ -270,7 +278,7 @@ class App implements Overdrip {
     await addDoc(actionsCollectionRef, {
       type: "watering",
       durationMs,
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
     });
 
     this.logger.info({ durationMs }, "Watering action logged to Firestore");
