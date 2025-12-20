@@ -78,13 +78,21 @@ export class MockWaterPump implements WaterPump {
 export class HardwareFactory {
   static createMoistureSensor(pin?: number): MoistureSensor {
     // TODO: Implement GPIO-based sensor when pin is provided
-    // For now, always return mock implementation
+    if (pin !== undefined) {
+      console.warn(
+        `GPIO pin ${pin} specified for moisture sensor, but GPIO is not yet implemented. Using mock sensor.`,
+      );
+    }
     return new MockMoistureSensor();
   }
 
   static createWaterPump(pin?: number): WaterPump {
     // TODO: Implement GPIO-based pump control when pin is provided
-    // For now, always return mock implementation
+    if (pin !== undefined) {
+      console.warn(
+        `GPIO pin ${pin} specified for water pump, but GPIO is not yet implemented. Using mock pump.`,
+      );
+    }
     return new MockWaterPump();
   }
 }

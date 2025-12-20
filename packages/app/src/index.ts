@@ -233,59 +233,74 @@ class App implements Overdrip {
   }
 
   private async logSensorReading(moistureLevel: number) {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      this.logger.warn("Cannot log sensor reading: user not authenticated");
-      return;
+    try {
+      const userId = this.ensureAuthenticated();
+      const deviceId = this.config.device.id;
+      const readingsCollectionRef = collection(
+        db,
+        "users",
+        userId,
+        "devices",
+        deviceId,
+        "readings",
+      );
+
+      await addDoc(readingsCollectionRef, {
+        type: "moisture",
+        value: moistureLevel,
+        timestamp: serverTimestamp(),
+      });
+
+      this.logger.debug(
+        { moistureLevel },
+        "Sensor reading logged to Firestore",
+      );
+    } catch (error) {
+      this.logger.warn(
+        { error },
+        "Cannot log sensor reading: user not authenticated",
+      );
     }
-
-    const deviceId = this.config.device.id;
-    const readingsCollectionRef = collection(
-      db,
-      "users",
-      userId,
-      "devices",
-      deviceId,
-      "readings",
-    );
-
-    await addDoc(readingsCollectionRef, {
-      type: "moisture",
-      value: moistureLevel,
-      timestamp: serverTimestamp(),
-    });
-
-    this.logger.debug({ moistureLevel }, "Sensor reading logged to Firestore");
   }
 
   private async logWateringAction(durationMs: number) {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      this.logger.warn("Cannot log watering action: user not authenticated");
-      return;
+    try {
+      const userId = this.ensureAuthenticated();
+      const deviceId = this.config.device.id;
+      const actionsCollectionRef = collection(
+        db,
+        "users",
+        userId,
+        "devices",
+        deviceId,
+        "actions",
+      );
+
+      await addDoc(actionsCollectionRef, {
+        type: "watering",
+        durationMs,
+        timestamp: serverTimestamp(),
+      });
+
+      this.logger.info({ durationMs }, "Watering action logged to Firestore");
+    } catch (error) {
+      this.logger.warn(
+        { error },
+        "Cannot log watering action: user not authenticated",
+      );
     }
-
-    const deviceId = this.config.device.id;
-    const actionsCollectionRef = collection(
-      db,
-      "users",
-      userId,
-      "devices",
-      deviceId,
-      "actions",
-    );
-
-    await addDoc(actionsCollectionRef, {
-      type: "watering",
-      durationMs,
-      timestamp: serverTimestamp(),
-    });
-
-    this.logger.info({ durationMs }, "Watering action logged to Firestore");
   }
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private ensureAuthenticated(): string {
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error("User not authenticated");
+    }
+    return userId;
   }
 }
 
