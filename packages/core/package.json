@@ -5,6 +5,10 @@
     ".": {
       "import": "./src/index.ts",
       "types": "./src/index.ts"
+    },
+    "./schemas": {
+      "import": "./src/schemas.ts",
+      "types": "./src/schemas.ts"
     }
   },
   "devDependencies": {
@@ -17,7 +21,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@overdrip/functions": "workspace:*",
     "firebase": "^12.6.0",
     "zod": "^4.1.13"
   }

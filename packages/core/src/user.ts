@@ -4,15 +4,11 @@ import {
   signInWithCustomToken,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import z from "zod";
 import { createCustomToken } from "./device";
 import { auth } from "./firebase";
+import { type User } from "./schemas";
 
-export const UserSchema = z.object({
-  uid: z.string().min(1),
-});
-
-export type User = z.infer<typeof UserSchema>;
+export { UserSchema, type User } from "./schemas";
 
 export const onAuthChange = (
   next: (user: User | null) => void,

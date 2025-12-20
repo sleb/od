@@ -1,12 +1,28 @@
-import { addYears, isAfter, parseISO } from "date-fns";
-import { onRequest } from "firebase-functions/https";
-import { error } from "firebase-functions/logger";
-import { app } from "./firebase";
 import {
   CreateCustomTokenRequestSchema,
   DeviceRegistrationSchema,
   type CreateCustomTokenResponse,
-} from "./model";
+} from "@overdrip/core/schemas";
+import { addYears, isAfter, parseISO } from "date-fns";
+import { onRequest } from "firebase-functions/https";
+import { error } from "firebase-functions/logger";
+import { app } from "./firebase";
+
+/**
+ * Validates whether an auth token is still valid for a device.
+ * Token is valid if it matches the device token AND has not expired (1 year).
+ */
+export const isAuthTokenValid = (
+  requestToken: string,
+  deviceToken: string,
+  registeredAtISO: string,
+): boolean => {
+  const tokensMatch = requestToken === deviceToken;
+  const expiration = addYears(parseISO(registeredAtISO), 1);
+  const tokenExpired = isAfter(new Date(), expiration);
+
+  return tokensMatch && !tokenExpired;
+};
 
 export const createCustomToken = onRequest(async (req, res) => {
   if (req.method !== "POST") {
@@ -38,14 +54,9 @@ export const createCustomToken = onRequest(async (req, res) => {
 
   const { authToken: deviceAuthToken, registeredAt } =
     DeviceRegistrationSchema.parse(deviceRef.data());
-  const tokensMatch = deviceAuthToken === authToken;
 
-  const expiration = addYears(parseISO(registeredAt), 1);
-  const now = new Date();
-  const tokenExpired = isAfter(now, expiration);
-
-  if (!tokensMatch || tokenExpired) {
-    error({ message: "Invalid auth token", tokensMatch, tokenExpired });
+  if (!isAuthTokenValid(authToken, deviceAuthToken, registeredAt)) {
+    error({ message: "Invalid auth token" });
     res.status(401).send("Invalid auth token");
     return;
   }

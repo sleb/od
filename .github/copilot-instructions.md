@@ -151,6 +151,29 @@ type Page =
 - Hardware interactions (GPIO pins, sensors) should be abstracted behind interfaces for testability
 - Config schema in `core` should define pin mappings, watering schedules
 
+## Unit Testing
+
+**Approach:** Lean, critical-logic-only testing using Bun's built-in test runner. No external frameworks needed.
+
+**Test coverage completed:**
+
+- ✅ `packages/core/src/config.test.ts` — 19 tests (LocalConfigManager I/O and ConfigSchema validation)
+- ✅ `packages/core/src/user.test.ts` — 9 tests (UserSchema validation)
+- ✅ `packages/core/src/device.test.ts` — 42 tests (Device schemas: primitives, request/response, registration)
+- ✅ `packages/functions/src/register-device.test.ts` — 10 tests (RegisterDevice request/response schema validation)
+- ✅ `packages/functions/src/create-custom-token.test.ts` — 16 tests (CreateCustomToken schemas + extracted `isAuthTokenValid()` pure function)
+
+**Total: 96 tests passing** across core and functions packages.
+
+**Key patterns:**
+
+- **Schema testing:** Use Zod's `.safeParse()` directly; schemas consolidated in `packages/core/src/schemas.ts` (pure module, no Firebase init)
+- **LocalConfigManager:** Use temp files via Bun's `file()` API
+- **Pure functions:** Extract business logic (e.g., `isAuthTokenValid()`) for direct unit testing
+- **What to skip:** Don't test Firebase SDK methods, Bun internals, Ink components, or external libraries
+
+**Run tests:** `bun test` from workspace root or per-package.
+
 ## Validation checklist
 
 When making changes:

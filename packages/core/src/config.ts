@@ -1,6 +1,6 @@
 import { file, write } from "bun";
 import z from "zod";
-import { DeviceRegistrationSchema } from "./device";
+import { DeviceConfigSchema } from "./schemas";
 
 const LogLevelSchema = z
   .enum(["debug", "info", "warn", "error"])
@@ -19,7 +19,7 @@ const LoggerSchema = z.discriminatedUnion("dest", [
 ]);
 
 export const ConfigSchema = z.object({
-  device: DeviceRegistrationSchema,
+  device: DeviceConfigSchema,
   logging: z.array(LoggerSchema).default([{ dest: "console", level: "info" }]),
 });
 

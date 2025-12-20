@@ -1,22 +1,13 @@
+import {
+  DeviceRegistrationSchema,
+  RegisterDeviceRequestSchema,
+  type DeviceRegistration,
+  type RegisterDeviceRequest,
+  type RegisterDeviceResponse,
+} from "@overdrip/core/schemas";
 import { HttpsError, onCall } from "firebase-functions/https";
 import { error, info } from "firebase-functions/logger";
-import z from "zod";
 import { app } from "./firebase";
-import type { DeviceRegistration } from "./model";
-
-export const RegisterDeviceRequestSchema = z.object({
-  name: z.string().min(1).max(100),
-});
-
-export const RegisterDeviceResponseSchema = z.object({
-  id: z.string().min(1).max(100),
-  authToken: z.string().min(1),
-});
-
-export type RegisterDeviceRequest = z.infer<typeof RegisterDeviceRequestSchema>;
-export type RegisterDeviceResponse = z.infer<
-  typeof RegisterDeviceResponseSchema
->;
 
 export const registerDevice = onCall<
   RegisterDeviceRequest,
@@ -33,19 +24,15 @@ export const registerDevice = onCall<
   const { name } = RegisterDeviceRequestSchema.parse(req.data);
   info(`Registering device with name: ${name} for user: ${uid}`);
 
-
   try {
-    const deviceRef = app
-      .firestore()
-      .collection(`users/${uid}/devices`)
-      .doc();
+    const deviceRef = app.firestore().collection(`users/${uid}/devices`).doc();
 
-    const device: DeviceRegistration = {
+    const device: DeviceRegistration = DeviceRegistrationSchema.parse({
       id: deviceRef.id,
       name,
       authToken: crypto.randomUUID(),
       registeredAt: new Date().toISOString(),
-    };
+    });
 
     await deviceRef.set(device);
     info(`Device registered with ID: ${device.id} for user: ${uid}`);

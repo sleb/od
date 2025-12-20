@@ -1,30 +1,26 @@
+import { httpsCallable } from "firebase/functions";
+import { CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
 import {
+  CreateCustomTokenResponseSchema,
+  RegisterDeviceRequestSchema,
   RegisterDeviceResponseSchema,
+  type DeviceConfig,
   type RegisterDeviceRequest,
   type RegisterDeviceResponse,
-} from "@overdrip/functions";
-import { httpsCallable } from "firebase/functions";
-import z from "zod";
-import { CreateCustomTokenResponseSchema } from "../../functions/src/model";
-import { CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
+} from "./schemas";
+
+export { DeviceConfigSchema, DeviceRegistrationSchema } from "./schemas";
 
 const registerDeviceCallable = httpsCallable<
   RegisterDeviceRequest,
   RegisterDeviceResponse
 >(functions, "registerDevice");
 
-export const DeviceRegistrationSchema = RegisterDeviceResponseSchema.extend({
-  name: z.string(),
-});
-
-export type DeviceRegistration = z.infer<typeof DeviceRegistrationSchema>;
-
-export const registerDevice = async (
-  name: string,
-): Promise<DeviceRegistration> => {
+export const registerDevice = async (name: string): Promise<DeviceConfig> => {
   try {
-    const result = await registerDeviceCallable({ name });
-    return { ...result.data, name };
+    const request = RegisterDeviceRequestSchema.parse({ name });
+    const result = await registerDeviceCallable(request);
+    return { ...RegisterDeviceResponseSchema.parse(result.data), name };
   } catch (error) {
     throw new Error(`Failed to register device: ${error}`);
   }

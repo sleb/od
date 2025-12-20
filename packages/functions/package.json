@@ -20,6 +20,7 @@
     }
   },
   "dependencies": {
+    "@overdrip/core": "workspace:*",
     "date-fns": "^4.1.0",
     "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.1",
