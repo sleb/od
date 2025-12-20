@@ -7,8 +7,8 @@ A Raspberry Pi-based office plant watering system powered by [Bun](https://bun.c
 Overdrip automates plant watering with a distributed architecture:
 
 - **CLI** (`packages/cli`) — Start/stop and configure the application on your Raspberry Pi
-- **App** (`packages/app`) — Runtime logic for device control and backend communication (planned)
-- **Backend** — Firebase-based authentication, device management, configuration, and stats (planned)
+- **App** (`packages/app`) — Runtime logic for device control and backend communication
+- **Backend** — Firebase-based authentication, device management, configuration, and stats
 
 ## Quick Start
 
@@ -33,6 +33,35 @@ Specify a custom config path:
 bun run src/index.ts init -p /custom/path/config.json
 ```
 
+### Start the Device Runtime
+
+After initializing configuration, start the device runtime:
+
+```bash
+cd packages/cli
+bun run src/index.ts start
+```
+
+The device will:
+1. Authenticate with Firebase using the registered device credentials
+2. Load configuration from Firestore (or create default configuration)
+3. Start the main monitoring loop:
+   - Read moisture sensor every `checkIntervalMs` (default: 60s)
+   - Trigger watering when moisture drops below `moistureThreshold` (default: 30%)
+   - Run pump for `wateringDurationMs` (default: 5s)
+   - Log all readings and actions to Firestore
+
+### Device Configuration
+
+Device configuration is stored in Firestore at `/users/{userId}/devices/{deviceId}`. Available settings:
+
+- `moistureThreshold` (0-100): Moisture level that triggers watering (default: 30)
+- `wateringDurationMs`: How long to run the pump in milliseconds (default: 5000)
+- `checkIntervalMs`: Time between moisture checks in milliseconds (default: 60000)
+- `moistureSensorPin`: GPIO pin for moisture sensor (BCM numbering, optional)
+- `pumpRelayPin`: GPIO pin for pump relay (BCM numbering, optional)
+- `autoWateringEnabled`: Enable/disable automatic watering (default: true)
+
 ## Architecture
 
 ### Packages
@@ -41,6 +70,21 @@ bun run src/index.ts init -p /custom/path/config.json
   - Command entry: `src/index.ts` (yargs)
   - Config location: `~/.overdrip/config.json` (default)
   - Components: `InitPage` for setup, `Layout` for global UI, `StatusMessage` for user feedback
+
+- **`packages/app`** — Device runtime for watering automation
+  - Firebase authentication with custom tokens
+  - Firestore-based device configuration
+  - Main control loop: moisture sensing, watering logic, logging
+  - Hardware abstraction layer (mock implementations + future GPIO support)
+  
+- **`packages/core`** — Shared libraries and schemas
+  - Firebase SDK initialization
+  - Zod schemas for configuration and device data
+  - Device registration and authentication utilities
+
+- **`packages/functions`** — Cloud Functions (Firebase)
+  - Device registration endpoint
+  - Custom token generation for device authentication
 
 ## Development
 
@@ -55,14 +99,20 @@ bun run src/index.ts init -p /custom/path/config.json
 
 - Install deps: `bun install`
 - Run CLI: `cd packages/cli && bun run src/index.ts init`
+- Start device: `cd packages/cli && bun run src/index.ts start`
+- Run tests: `bun test`
 - Lint: `cd packages/cli && bun run lint`
 
 ## Future Roadmap
 
-- [ ] App package with device control runtime
-- [ ] Firebase backend (auth, device management, stats)
-- [ ] Additional CLI commands (start, stop, status)
-- [ ] Unit tests with `bun test`
+- [x] App package with device control runtime
+- [x] Firebase authentication with custom tokens
+- [x] Firestore-based device configuration
+- [x] Main application loop (moisture sensing, watering logic)
+- [ ] Real GPIO hardware support (currently using mock implementations)
+- [ ] Additional CLI commands (stop, status)
+- [ ] Cloud monitoring integration
+- [ ] Web dashboard for device management
 
 ## License
 
