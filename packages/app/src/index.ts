@@ -1,12 +1,11 @@
 import {
-  auth,
-  createCustomToken,
   type Config,
   createWateringConfigManager,
+  getCurrentUserId,
+  logInDevice,
   type WateringConfig,
   type WateringConfigManager,
 } from "@overdrip/core";
-import { signInWithCustomToken } from "firebase/auth";
 import pino from "pino";
 import {
   HardwareFactory,
@@ -63,7 +62,7 @@ class App implements Overdrip {
     // Initialize watering config manager
     this.wateringConfigManager = createWateringConfigManager(
       config.device.id,
-      () => auth.currentUser?.uid,
+      getCurrentUserId,
     );
   }
 
@@ -102,11 +101,8 @@ class App implements Overdrip {
 
     const { id, authToken } = this.config.device;
 
-    // Exchange auth token for custom token
-    const customToken = await createCustomToken(id, authToken);
-
-    // Sign in with custom token
-    await signInWithCustomToken(auth, customToken);
+    // Use core's logInDevice function
+    await logInDevice(id, authToken);
 
     this.logger.info({ deviceId: id }, "Successfully authenticated");
   }

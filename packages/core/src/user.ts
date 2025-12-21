@@ -67,3 +67,7 @@ export const logInDevice = async (
     throw new Error(`Error logging in device: ${err}`);
   }
 };
+
+export const getCurrentUserId = (): string | undefined => {
+  return auth.currentUser?.uid;
+};
