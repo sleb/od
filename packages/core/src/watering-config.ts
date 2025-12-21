@@ -1,4 +1,14 @@
 import z from "zod";
+import { auth, db } from "./firebase";
+import type { Firestore } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 
 /**
  * Schema for watering configuration stored in Firestore.
@@ -63,15 +73,7 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
   constructor(
     private deviceId: string,
     private getUserId: () => string | undefined,
-    private firestore: {
-      getDoc: typeof import("firebase/firestore").getDoc;
-      setDoc: typeof import("firebase/firestore").setDoc;
-      addDoc: typeof import("firebase/firestore").addDoc;
-      doc: typeof import("firebase/firestore").doc;
-      collection: typeof import("firebase/firestore").collection;
-      serverTimestamp: typeof import("firebase/firestore").serverTimestamp;
-    },
-    private db: any,
+    private db: Firestore,
   ) {}
 
   private ensureAuthenticated(): string {
@@ -84,19 +86,13 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
 
   async loadConfig(): Promise<WateringConfig> {
     const userId = this.ensureAuthenticated();
-    const deviceDocRef = this.firestore.doc(
-      this.db,
-      "users",
-      userId,
-      "devices",
-      this.deviceId,
-    );
-    const deviceDoc = await this.firestore.getDoc(deviceDocRef);
+    const deviceDocRef = doc(this.db, "users", userId, "devices", this.deviceId);
+    const deviceDoc = await getDoc(deviceDocRef);
 
     if (!deviceDoc.exists()) {
       // Create default configuration
       const defaultConfig = WateringConfigSchema.parse({});
-      await this.firestore.setDoc(deviceDocRef, defaultConfig, { merge: true });
+      await setDoc(deviceDocRef, defaultConfig, { merge: true });
       return defaultConfig;
     }
 
@@ -105,20 +101,14 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
 
   async saveConfig(config: WateringConfig): Promise<void> {
     const userId = this.ensureAuthenticated();
-    const deviceDocRef = this.firestore.doc(
-      this.db,
-      "users",
-      userId,
-      "devices",
-      this.deviceId,
-    );
-    await this.firestore.setDoc(deviceDocRef, config, { merge: true });
+    const deviceDocRef = doc(this.db, "users", userId, "devices", this.deviceId);
+    await setDoc(deviceDocRef, config, { merge: true });
   }
 
   async logSensorReading(moistureLevel: number): Promise<void> {
     try {
       const userId = this.ensureAuthenticated();
-      const readingsCollectionRef = this.firestore.collection(
+      const readingsCollectionRef = collection(
         this.db,
         "users",
         userId,
@@ -127,10 +117,10 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
         "readings",
       );
 
-      await this.firestore.addDoc(readingsCollectionRef, {
+      await addDoc(readingsCollectionRef, {
         type: "moisture",
         value: moistureLevel,
-        timestamp: this.firestore.serverTimestamp(),
+        timestamp: serverTimestamp(),
       });
     } catch (error) {
       // Silently fail - logging is not critical
@@ -141,7 +131,7 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
   async logWateringAction(durationMs: number): Promise<void> {
     try {
       const userId = this.ensureAuthenticated();
-      const actionsCollectionRef = this.firestore.collection(
+      const actionsCollectionRef = collection(
         this.db,
         "users",
         userId,
@@ -150,10 +140,10 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
         "actions",
       );
 
-      await this.firestore.addDoc(actionsCollectionRef, {
+      await addDoc(actionsCollectionRef, {
         type: "watering",
         durationMs,
-        timestamp: this.firestore.serverTimestamp(),
+        timestamp: serverTimestamp(),
       });
     } catch (error) {
       // Silently fail - logging is not critical
@@ -164,34 +154,11 @@ export class FirestoreWateringConfigManager implements WateringConfigManager {
 
 /**
  * Create a WateringConfigManager for a device.
- * This factory function handles injecting all Firebase dependencies.
+ * This factory function handles injecting Firebase dependencies.
  */
 export const createWateringConfigManager = (
   deviceId: string,
   getUserId: () => string | undefined,
 ): WateringConfigManager => {
-  // Import firebase dependencies dynamically to avoid circular dependencies
-  const { db } = require("./firebase");
-  const {
-    getDoc,
-    setDoc,
-    addDoc,
-    doc,
-    collection,
-    serverTimestamp,
-  } = require("firebase/firestore");
-
-  return new FirestoreWateringConfigManager(
-    deviceId,
-    getUserId,
-    {
-      getDoc,
-      setDoc,
-      addDoc,
-      doc,
-      collection,
-      serverTimestamp,
-    },
-    db,
-  );
+  return new FirestoreWateringConfigManager(deviceId, getUserId, db);
 };
