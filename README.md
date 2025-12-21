@@ -51,16 +51,18 @@ The device will:
    - Run pump for `wateringDurationMs` (default: 5s)
    - Log all readings and actions to Firestore
 
-### Device Configuration
+### Watering Configuration
 
-Device configuration is stored in Firestore at `/users/{userId}/devices/{deviceId}`. Available settings:
+Watering configuration is stored in Firestore at `/users/{userId}/devices/{deviceId}`. Available settings:
 
 - `moistureThreshold` (0-100): Moisture level that triggers watering (default: 30)
 - `wateringDurationMs`: How long to run the pump in milliseconds (default: 5000)
 - `checkIntervalMs`: Time between moisture checks in milliseconds (default: 60000)
-- `moistureSensorPin`: GPIO pin for moisture sensor (BCM numbering, optional)
-- `pumpRelayPin`: GPIO pin for pump relay (BCM numbering, optional)
 - `autoWateringEnabled`: Enable/disable automatic watering (default: true)
+
+GPIO pins are configured in the application code:
+- Moisture sensor: GPIO 17 (BCM numbering)
+- Pump relay: GPIO 27 (BCM numbering)
 
 ## Architecture
 

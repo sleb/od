@@ -1,20 +1,12 @@
 import {
   auth,
   createCustomToken,
-  db,
   type Config,
-  type DeviceConfig,
-  DeviceConfigSchema,
+  createWateringConfigManager,
+  type WateringConfig,
+  type WateringConfigManager,
 } from "@overdrip/core";
 import { signInWithCustomToken } from "firebase/auth";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  serverTimestamp,
-  setDoc,
-} from "firebase/firestore";
 import pino from "pino";
 import {
   HardwareFactory,
@@ -27,12 +19,17 @@ export interface Overdrip {
   stop(): Promise<void>;
 }
 
+// GPIO pin configuration (application-level constants)
+const MOISTURE_SENSOR_PIN = 17; // BCM pin for moisture sensor
+const PUMP_RELAY_PIN = 27; // BCM pin for pump relay
+
 class App implements Overdrip {
   logger: pino.Logger;
   private running = false;
   private moistureSensor: MoistureSensor;
   private waterPump: WaterPump;
-  private deviceConfig: DeviceConfig | null = null;
+  private wateringConfig: WateringConfig | null = null;
+  private wateringConfigManager: WateringConfigManager;
   private static readonly ERROR_RETRY_DELAY_MS = 5000;
 
   constructor(private config: Config) {
@@ -57,9 +54,17 @@ class App implements Overdrip {
       },
     });
 
-    // Initialize hardware (will use mock implementations for now)
-    this.moistureSensor = HardwareFactory.createMoistureSensor();
-    this.waterPump = HardwareFactory.createWaterPump();
+    // Initialize hardware with configured pins
+    this.moistureSensor = HardwareFactory.createMoistureSensor(
+      MOISTURE_SENSOR_PIN,
+    );
+    this.waterPump = HardwareFactory.createWaterPump(PUMP_RELAY_PIN);
+
+    // Initialize watering config manager
+    this.wateringConfigManager = createWateringConfigManager(
+      config.device.id,
+      () => auth.currentUser?.uid,
+    );
   }
 
   async start() {
@@ -70,7 +75,7 @@ class App implements Overdrip {
       await this.authenticate();
 
       // Step 2: Read configuration from Firestore
-      await this.loadDeviceConfig();
+      await this.loadWateringConfig();
 
       // Step 3: Start main application loop
       this.running = true;
@@ -106,45 +111,15 @@ class App implements Overdrip {
     this.logger.info({ deviceId: id }, "Successfully authenticated");
   }
 
-  private async loadDeviceConfig() {
-    this.logger.info("Loading device configuration from Firestore...");
+  private async loadWateringConfig() {
+    this.logger.info("Loading watering configuration from Firestore...");
 
-    const deviceId = this.config.device.id;
-    const userId = auth.currentUser?.uid;
-
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-
-    // Read from /users/{userId}/devices/{deviceId}
-    const deviceDocRef = doc(db, "users", userId, "devices", deviceId);
-    const deviceDoc = await getDoc(deviceDocRef);
-
-    if (!deviceDoc.exists()) {
-      // Create default configuration if it doesn't exist
-      this.logger.info("No configuration found, creating default...");
-      this.deviceConfig = DeviceConfigSchema.parse({});
-      await setDoc(deviceDocRef, this.deviceConfig, { merge: true });
-    } else {
-      this.deviceConfig = DeviceConfigSchema.parse(deviceDoc.data());
-    }
+    this.wateringConfig = await this.wateringConfigManager.loadConfig();
 
     this.logger.info(
-      { config: this.deviceConfig },
-      "Device configuration loaded",
+      { config: this.wateringConfig },
+      "Watering configuration loaded",
     );
-
-    // Update hardware with pin configuration if provided
-    if (this.deviceConfig.moistureSensorPin !== undefined) {
-      this.moistureSensor = HardwareFactory.createMoistureSensor(
-        this.deviceConfig.moistureSensorPin,
-      );
-    }
-    if (this.deviceConfig.pumpRelayPin !== undefined) {
-      this.waterPump = HardwareFactory.createWaterPump(
-        this.deviceConfig.pumpRelayPin,
-      );
-    }
   }
 
   private async runMainLoop() {
@@ -155,7 +130,7 @@ class App implements Overdrip {
         await this.checkAndWater();
 
         // Sleep until next interval
-        const checkInterval = this.deviceConfig?.checkIntervalMs || 60000;
+        const checkInterval = this.wateringConfig?.checkIntervalMs || 60000;
         this.logger.debug(
           { intervalMs: checkInterval },
           "Sleeping until next check",
@@ -172,8 +147,8 @@ class App implements Overdrip {
   }
 
   private async checkAndWater() {
-    if (!this.deviceConfig) {
-      this.logger.warn("Device configuration not loaded, skipping check");
+    if (!this.wateringConfig) {
+      this.logger.warn("Watering configuration not loaded, skipping check");
       return;
     }
 
@@ -182,17 +157,17 @@ class App implements Overdrip {
     this.logger.info({ moistureLevel }, "Moisture level reading");
 
     // Log to Firestore
-    await this.logSensorReading(moistureLevel);
+    await this.wateringConfigManager.logSensorReading(moistureLevel);
 
     // Check if watering is needed
     if (
-      this.deviceConfig.autoWateringEnabled &&
-      moistureLevel < this.deviceConfig.moistureThreshold
+      this.wateringConfig.autoWateringEnabled &&
+      moistureLevel < this.wateringConfig.moistureThreshold
     ) {
       this.logger.info(
         {
           moistureLevel,
-          threshold: this.deviceConfig.moistureThreshold,
+          threshold: this.wateringConfig.moistureThreshold,
         },
         "Moisture below threshold, starting watering",
       );
@@ -203,11 +178,11 @@ class App implements Overdrip {
   }
 
   private async water() {
-    if (!this.deviceConfig) {
-      throw new Error("Device configuration not loaded");
+    if (!this.wateringConfig) {
+      throw new Error("Watering configuration not loaded");
     }
 
-    const duration = this.deviceConfig.wateringDurationMs;
+    const duration = this.wateringConfig.wateringDurationMs;
 
     try {
       // Turn pump on
@@ -222,7 +197,7 @@ class App implements Overdrip {
       this.logger.info("Water pump turned off");
 
       // Log watering action
-      await this.logWateringAction(duration);
+      await this.wateringConfigManager.logWateringAction(duration);
     } catch (error) {
       // Ensure pump is turned off even if there's an error
       if (this.waterPump.isRunning()) {
@@ -232,75 +207,8 @@ class App implements Overdrip {
     }
   }
 
-  private async logSensorReading(moistureLevel: number) {
-    try {
-      const userId = this.ensureAuthenticated();
-      const deviceId = this.config.device.id;
-      const readingsCollectionRef = collection(
-        db,
-        "users",
-        userId,
-        "devices",
-        deviceId,
-        "readings",
-      );
-
-      await addDoc(readingsCollectionRef, {
-        type: "moisture",
-        value: moistureLevel,
-        timestamp: serverTimestamp(),
-      });
-
-      this.logger.debug(
-        { moistureLevel },
-        "Sensor reading logged to Firestore",
-      );
-    } catch (error) {
-      this.logger.warn(
-        { error },
-        "Failed to log sensor reading to Firestore",
-      );
-    }
-  }
-
-  private async logWateringAction(durationMs: number) {
-    try {
-      const userId = this.ensureAuthenticated();
-      const deviceId = this.config.device.id;
-      const actionsCollectionRef = collection(
-        db,
-        "users",
-        userId,
-        "devices",
-        deviceId,
-        "actions",
-      );
-
-      await addDoc(actionsCollectionRef, {
-        type: "watering",
-        durationMs,
-        timestamp: serverTimestamp(),
-      });
-
-      this.logger.info({ durationMs }, "Watering action logged to Firestore");
-    } catch (error) {
-      this.logger.warn(
-        { error },
-        "Failed to log watering action to Firestore",
-      );
-    }
-  }
-
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  private ensureAuthenticated(): string {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      throw new Error("User not authenticated");
-    }
-    return userId;
   }
 }
 

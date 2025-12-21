@@ -76,27 +76,23 @@ export class MockWaterPump implements WaterPump {
  * Returns mock implementations for now; can be extended to support real GPIO.
  */
 export class HardwareFactory {
-  static createMoistureSensor(pin?: number): MoistureSensor {
+  static createMoistureSensor(pin: number): MoistureSensor {
     // TODO: Implement GPIO-based sensor when pin is provided
-    if (pin !== undefined) {
-      // Note: Using console.warn here since we don't have access to the logger
-      // This is acceptable for factory methods that run during initialization
-      console.warn(
-        `[Overdrip] GPIO pin ${pin} specified for moisture sensor, but GPIO is not yet implemented. Using mock sensor.`,
-      );
-    }
+    // Note: Using console.warn here since we don't have access to the logger
+    // This is acceptable for factory methods that run during initialization
+    console.warn(
+      `[Overdrip] GPIO pin ${pin} specified for moisture sensor, but GPIO is not yet implemented. Using mock sensor.`,
+    );
     return new MockMoistureSensor();
   }
 
-  static createWaterPump(pin?: number): WaterPump {
+  static createWaterPump(pin: number): WaterPump {
     // TODO: Implement GPIO-based pump control when pin is provided
-    if (pin !== undefined) {
-      // Note: Using console.warn here since we don't have access to the logger
-      // This is acceptable for factory methods that run during initialization
-      console.warn(
-        `[Overdrip] GPIO pin ${pin} specified for water pump, but GPIO is not yet implemented. Using mock pump.`,
-      );
-    }
+    // Note: Using console.warn here since we don't have access to the logger
+    // This is acceptable for factory methods that run during initialization
+    console.warn(
+      `[Overdrip] GPIO pin ${pin} specified for water pump, but GPIO is not yet implemented. Using mock pump.`,
+    );
     return new MockWaterPump();
   }
 }

@@ -29,21 +29,11 @@ describe("MockWaterPump", () => {
 
 describe("HardwareFactory", () => {
   it("should create a moisture sensor", () => {
-    const sensor = HardwareFactory.createMoistureSensor();
-    expect(sensor).toBeInstanceOf(MockMoistureSensor);
-  });
-
-  it("should create a moisture sensor with pin", () => {
     const sensor = HardwareFactory.createMoistureSensor(17);
     expect(sensor).toBeInstanceOf(MockMoistureSensor);
   });
 
   it("should create a water pump", () => {
-    const pump = HardwareFactory.createWaterPump();
-    expect(pump).toBeInstanceOf(MockWaterPump);
-  });
-
-  it("should create a water pump with pin", () => {
     const pump = HardwareFactory.createWaterPump(27);
     expect(pump).toBeInstanceOf(MockWaterPump);
   });
