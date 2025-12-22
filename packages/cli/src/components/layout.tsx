@@ -1,9 +1,8 @@
 import { Box, Text, useInput } from "ink";
-import BigText from "ink-big-text";
-import Gradient from "ink-gradient";
 import { useContext, type ReactNode } from "react";
 import { UserContext } from "../context/user-context";
 import { useQuit } from "../hooks/quit-hook";
+import Banner from "./banner";
 import QuitMessage from "./quit-message";
 
 type Props = { children: ReactNode };
@@ -19,9 +18,7 @@ const Layout = ({ children }: Props) => {
 
   return (
     <Box flexDirection="column" gap={1}>
-      <Gradient name="atlas">
-        <BigText text="Overdrip" font="tiny" />
-      </Gradient>
+      <Banner />
       {user && <Text dimColor>Logged in as {user.uid}</Text>}
       {children}
       <QuitMessage />

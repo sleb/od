@@ -4,30 +4,35 @@ const build = async (): Promise<void> => {
   console.log("🏗️  Building Overdrip CLI...");
 
   const outdir = "dist";
+  const targets: Bun.Build.Target[] = ["bun-linux-arm64", "bun-darwin-arm64"];
   console.log(`  🧹 Cleaning output directory "${outdir}"...`);
   await rm(outdir, { recursive: true, force: true });
 
   console.log("  👨‍💻 Compiling source files...");
-  const result = await Bun.build({
-    entrypoints: ["src/index.ts"],
-    outdir,
-    target: "bun",
-    sourcemap: true,
-    minify: true,
-    define: {
-      NODE_ENV: "production",
-    },
-    env: "inline",
-  });
 
-  if (!result.success) {
-    console.error("Build failed:", result.logs);
-    process.exit(1);
-  }
+  for (const target of targets) {
+    console.log(`    🔨 Targeting: ${target}`);
+    const result = await Bun.build({
+      entrypoints: ["src/index.ts"],
+      outdir: `${outdir}/${target}`,
+      target: "bun",
+      minify: true,
+      env: "inline",
+      compile: {
+        target,
+        outfile: "overdrip",
+      },
+    });
 
-  console.log("\n✅ Build completed successfully!");
-  for (const output of result.outputs) {
-    console.log(`  📦 Created: ${output.path}`);
+    if (!result.success) {
+      console.error("Build failed:", result.logs);
+      process.exit(1);
+    }
+
+    console.log("    ✅ Build completed successfully!");
+    for (const output of result.outputs) {
+      console.log(`        📦 Created: ${output.path}`);
+    }
   }
 };
 

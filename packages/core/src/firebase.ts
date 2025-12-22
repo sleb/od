@@ -24,13 +24,11 @@ if (process.env.NODE_ENV !== "production") {
   connectFunctionsEmulator(functions, "localhost", 5001);
 }
 
-const CREATE_CUSTOM_TOKEN_URL_ENV = "OVERDRIP_FIREBASE_CREATE_CUSTOM_TOKEN_URL";
-
 const getCreateCustomTokenUrl = () => {
-  const url = process.env[CREATE_CUSTOM_TOKEN_URL_ENV];
+  const url = process.env.OVERDRIP_FIREBASE_CREATE_CUSTOM_TOKEN_URL;
   if (!url) {
     throw new Error(
-      `Environment variable ${CREATE_CUSTOM_TOKEN_URL_ENV} is not set`,
+      `Environment variable OVERDRIP_FIREBASE_CREATE_CUSTOM_TOKEN_URL is not set`,
     );
   }
   return url;
