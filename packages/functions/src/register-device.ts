@@ -12,7 +12,8 @@ import { app } from "./firebase";
 export const registerDevice = onCall<
   RegisterDeviceRequest,
   Promise<RegisterDeviceResponse>
->(async (req) => {
+>({ cors: true }, async (req) => {
+  info({ message: "received auth", auth: req.auth });
   const uid = req.auth?.uid;
   if (!uid) {
     throw new HttpsError(

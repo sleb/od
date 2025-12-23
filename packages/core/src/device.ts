@@ -11,12 +11,12 @@ import {
 
 export { DeviceConfigSchema, DeviceRegistrationSchema } from "./schemas";
 
-const registerDeviceCallable = httpsCallable<
-  RegisterDeviceRequest,
-  RegisterDeviceResponse
->(functions, "registerDevice");
-
 export const registerDevice = async (name: string): Promise<DeviceConfig> => {
+  const registerDeviceCallable = httpsCallable<
+    RegisterDeviceRequest,
+    RegisterDeviceResponse
+  >(functions, "registerDevice");
+
   try {
     const request = RegisterDeviceRequestSchema.parse({ name });
     const result = await registerDeviceCallable(request);

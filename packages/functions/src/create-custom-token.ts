@@ -44,7 +44,6 @@ export const createCustomToken = onRequest(async (req, res) => {
     .where("id", "==", id)
     .get();
 
-  console.log(devices);
   const deviceRef = devices.docs[0];
   if (!deviceRef?.exists) {
     error({ message: "Device not found", id });

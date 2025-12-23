@@ -14,7 +14,7 @@ const build = async (): Promise<void> => {
     target: "node",
     format: "cjs",
     sourcemap: true,
-    minify: true,
+    minify: false,
     env: "inline",
   });
 
@@ -28,7 +28,7 @@ const build = async (): Promise<void> => {
     console.log(`  📦 Created: ${output.path}`);
   }
 
-  console.log("\n📋 Copying `package.json`...")
+  console.log("\n📋 Copying `package.json`...");
   await cp("./dummy-package.json", "./lib/package.json");
   console.log("  📦 Created: lib/package.json");
 };
