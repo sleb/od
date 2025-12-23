@@ -27,7 +27,6 @@ export type RegisterDeviceResponse = z.infer<
   typeof RegisterDeviceResponseSchema
 >;
 
-// Minimal shape stored in local config
 export const DeviceConfigSchema = RegisterDeviceResponseSchema.extend({
   name: DeviceName,
 });

@@ -1,34 +1,48 @@
-import type { DeviceRegistration } from "@overdrip/core";
-import { Form, type FormStructure } from "ink-form";
+import { registerDevice, type DeviceRegistration } from "@overdrip/core";
+import { Text } from "ink";
+import { useState } from "react";
+import { useConfig } from "../hooks/config-hook";
+import { useQuit } from "../hooks/quit-hook";
 import AuthRequired from "./auth-required";
+import TextField from "./text-field";
 
 type Props = {
-  onSubmit: (form: object) => void;
   defaultValues?: Partial<DeviceRegistration>;
 };
 
-const DeviceRegistrationForm = ({ onSubmit, defaultValues }: Props) => {
-  const form: FormStructure = {
-    sections: [
-      {
-        title: "Register Device",
-        fields: [
-          {
-            name: "name",
-            label: "Device Name",
-            placeholder: "My Device",
-            initialValue: defaultValues?.name,
-            type: "string",
-            required: true,
-          },
-        ],
-      },
-    ],
+const DeviceRegistrationForm = ({ defaultValues }: Props) => {
+  const [completed, setCompleted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const configManager = useConfig();
+  const quit = useQuit();
+
+  const handleSubmit = async (name: string) => {
+    try {
+      const device = await registerDevice(name);
+      await configManager.saveConfig({ device });
+      setCompleted(true);
+    } catch (err) {
+      setError(`Device registration failed: ${err}`);
+    } finally {
+      quit();
+    }
   };
+
+  if (error) {
+    return <Text color="red">{error}</Text>;
+  }
+
+  if (completed) {
+    return <Text color="green">Device registered successfully!</Text>;
+  }
 
   return (
     <AuthRequired>
-      <Form form={form} onSubmit={onSubmit} />
+      <TextField
+        label="Device Name:"
+        onSubmit={handleSubmit}
+        defaultValue={defaultValues?.name}
+      />
     </AuthRequired>
   );
 };

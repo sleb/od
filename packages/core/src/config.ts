@@ -20,7 +20,10 @@ const LoggerSchema = z.discriminatedUnion("dest", [
 
 export const ConfigSchema = z.object({
   device: DeviceConfigSchema,
-  logging: z.array(LoggerSchema).default([{ dest: "console", level: "info" }]),
+  logging: z
+    .array(LoggerSchema)
+    .default([{ dest: "console", level: "info" }])
+    .optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;
