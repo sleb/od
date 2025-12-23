@@ -51,7 +51,9 @@ cd packages/functions && bun run serve        # Start Firebase emulators
 **Environment variables:**
 
 - Firebase config via `OVERDRIP_FIREBASE_*` env vars (see [packages/cli/.env](packages/cli/.env) for local, `.env.production` for prod)
+- Set `NODE_ENV=production` when building CLI for release (e.g., `NODE_ENV=production bun run build`)
 - Emulators auto-enabled when `NODE_ENV !== "production"` (Auth: 9099, Firestore: 8080, Functions: 5001)
+- **CI/CD:** GitHub Actions use `NODE_ENV=production` + production Firebase config for production builds
 
 ## Project-specific patterns
 
@@ -109,6 +111,13 @@ type Page =
 // Pages rendered based on yargs command → app(page, configPath)
 ```
 
+**Command structure ([index.ts](packages/cli/src/index.ts)):**
+
+- `init` / `i` — Initialize Overdrip (creates config, authenticates user, registers device)
+- `config show` / `c s` — Display current configuration
+- `start` / `s` — Launch the watering system (`--detach` / `-d` for background)
+- Global `--path` / `-p` option sets config file location (default: `~/.overdrip/config.json`)
+
 **Component organization:**
 
 - `Layout` — Global wrapper (logo, user display, quit message, global key bindings)
@@ -145,11 +154,14 @@ type Page =
 - Update rules when adding new collections or changing access patterns
 - Test rules with Firebase emulator before deploying
 
-## GPIO/Hardware (app package)
+## App Package (device runtime)
 
-- Device control logic lives in `packages/app` (planned)
-- Hardware interactions (GPIO pins, sensors) should be abstracted behind interfaces for testability
-- Config schema in `core` should define pin mappings, watering schedules
+**Status:** Initialization layer implemented; hardware control logic pending.
+
+- `packages/app` exports `Overdrip` interface with `start()` method (see [packages/app/src/index.ts](packages/app/src/index.ts))
+- Logging configured via config `logging` array (targets: `console`, `file`; levels: configurable per target)
+- Device control logic (GPIO pins, sensors, watering) to be abstracted behind interfaces for testability
+- Config schema in `core` defines `LogConfig` (level, dest) and `Config.logging[]` — extend for hardware mappings
 
 ## Unit Testing
 

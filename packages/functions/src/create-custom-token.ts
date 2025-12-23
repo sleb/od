@@ -5,7 +5,7 @@ import {
 } from "@overdrip/core/schemas";
 import { addYears, isAfter, parseISO } from "date-fns";
 import { onRequest } from "firebase-functions/https";
-import { error } from "firebase-functions/logger";
+import { error, info } from "firebase-functions/logger";
 import { app } from "./firebase";
 
 /**
@@ -38,12 +38,14 @@ export const createCustomToken = onRequest(async (req, res) => {
   }
 
   const { id, authToken } = result.data;
+  info({ message: "Creating custom token", id });
   const devices = await app
     .firestore()
     .collectionGroup("devices")
     .where("id", "==", id)
     .get();
 
+  info({ message: `Found ${devices.size} devices for id ${id}` });
   const deviceRef = devices.docs[0];
   if (!deviceRef?.exists) {
     error({ message: "Device not found", id });
@@ -65,7 +67,8 @@ export const createCustomToken = onRequest(async (req, res) => {
     const response: CreateCustomTokenResponse = { customToken };
     res.send(response);
   } catch (e) {
-    error({ message: "Failed to create custom token", error: e });
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    error({ message: "Failed to create custom token", errorMessage });
     res.status(500).send("Failed to create custom token");
   }
 });

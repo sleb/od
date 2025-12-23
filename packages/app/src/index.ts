@@ -9,25 +9,10 @@ class App implements Overdrip {
   logger: pino.Logger;
 
   constructor(private config: Config) {
+    // Simple logging for production - no transports needed
+    // systemd/journalctl will handle formatting
     this.logger = pino({
-      transport: {
-        targets: config.logging.map((log) => {
-          switch (log.dest) {
-            case "console":
-              return {
-                target: "pino-pretty",
-                level: log.level,
-                options: { colorize: true },
-              };
-            case "file":
-              return {
-                target: "pino/file",
-                level: log.level,
-                options: { destination: log.path },
-              };
-          }
-        }),
-      },
+      level: config.logging[0]?.level || "info",
     });
   }
 

@@ -4,23 +4,28 @@ const build = async (): Promise<void> => {
   console.log("🏗️  Building Overdrip CLI...");
 
   const outdir = "dist";
-  const targets: Bun.Build.Target[] = ["bun-linux-arm64", "bun-darwin-arm64"];
+  const targets: [Bun.Build.Target, string][] = [
+    ["bun-linux-arm64", "linux-arm64"],
+    ["bun-linux-x64", "linux-x86_64"],
+    ["bun-darwin-arm64", "macos-arm64"],
+    ["bun-darwin-x64", "macos-x86_64"],
+  ];
   console.log(`  🧹 Cleaning output directory "${outdir}"...`);
   await rm(outdir, { recursive: true, force: true });
 
   console.log("  👨‍💻 Compiling source files...");
 
-  for (const target of targets) {
+  for (const [bunTarget, target] of targets) {
     console.log(`    🔨 Targeting: ${target}`);
     const result = await Bun.build({
       entrypoints: ["src/index.ts"],
-      outdir: `${outdir}/${target}`,
+      outdir,
       target: "bun",
       minify: true,
       env: "inline",
       compile: {
-        target,
-        outfile: "overdrip",
+        target: bunTarget,
+        outfile: `overdrip-${target}`,
       },
     });
 

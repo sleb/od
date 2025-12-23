@@ -1,68 +1,75 @@
 # Overdrip
 
-A Raspberry Pi-based office plant watering system powered by [Bun](https://bun.com).
-
-## Overview
-
-Overdrip automates plant watering with a distributed architecture:
-
-- **CLI** (`packages/cli`) — Start/stop and configure the application on your Raspberry Pi
-- **App** (`packages/app`) — Runtime logic for device control and backend communication (planned)
-- **Backend** — Firebase-based authentication, device management, configuration, and stats (planned)
+Automate plant watering on your Raspberry Pi. Configure devices, manage watering schedules, and monitor plant health from the command line.
 
 ## Quick Start
 
+### Prerequisites
+
+- Bun v1.3+ ([install](https://bun.sh))
+- A Raspberry Pi (3B+ or newer recommended)
+
 ### Installation
+
+Once distributed:
+
+```bash
+curl -sSL https://get.overdrip.app | bash
+```
+
+For development, use from source:
 
 ```bash
 bun install
-```
-
-### Run the CLI
-
-Initialize configuration:
-
-```bash
 cd packages/cli
-bun run src/index.ts init
+bun run src/index.ts --help
 ```
 
-Specify a custom config path:
+### Get Started
 
 ```bash
-bun run src/index.ts init -p /custom/path/config.json
+# Interactive setup
+drip init
+
+# Specify custom config path
+drip init -p /custom/path/config.json
+
+# Show configuration
+drip config show
+
+# Start watering system
+drip start
+drip start --detach  # Run in background
 ```
 
-## Architecture
+Configuration is stored at `~/.overdrip/config.json` by default.
 
-### Packages
+## Features
 
-- **`packages/cli`** — Bun-based CLI using Ink for interactive terminal UI
-  - Command entry: `src/index.ts` (yargs)
-  - Config location: `~/.overdrip/config.json` (default)
-  - Components: `InitPage` for setup, `Layout` for global UI, `StatusMessage` for user feedback
+- 🌱 **Web-first setup** — Authenticate with email/password, register devices
+- 🔐 **Secure device auth** — Devices authenticate with custom Firebase tokens
+- 📱 **Stateful config** — Local configuration persists across reboots
+- 📊 **Future: Backend stats** — Monitor watering history and plant health
+
+## What's Next
+
+- Device runtime with GPIO control
+- Watering schedule management
+- Cloud dashboard (Firebase Firestore)
+- Mobile companion app (planned)
 
 ## Development
 
-### Tech Stack
+To contribute:
 
-- **Runtime:** Bun v1.3+
-- **UI:** Ink (React TUI framework)
-- **CLI Framework:** yargs
-- **Validation:** Zod
+```bash
+bun install                                     # Install all packages
+bun test                                        # Run tests
+cd packages/cli && bun run lint                 # Lint
+cd packages/cli && NODE_ENV=production bun run build  # Build for production
+```
 
-### Commands
-
-- Install deps: `bun install`
-- Run CLI: `cd packages/cli && bun run src/index.ts init`
-- Lint: `cd packages/cli && bun run lint`
-
-## Future Roadmap
-
-- [ ] App package with device control runtime
-- [ ] Firebase backend (auth, device management, stats)
-- [ ] Additional CLI commands (start, stop, status)
-- [ ] Unit tests with `bun test`
+See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for architecture details and development patterns.
 
 ## License
 
