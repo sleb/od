@@ -159,9 +159,9 @@ type Page =
 **Status:** Initialization layer implemented; hardware control logic pending.
 
 - `packages/app` exports `Overdrip` interface with `start()` method (see [packages/app/src/index.ts](packages/app/src/index.ts))
-- Logging configured via config `logging` array (targets: `console`, `file`; levels: configurable per target)
+- Logging level configured via `logLevel` in config (values: `debug`, `info`, `warn`, `error`)
 - Device control logic (GPIO pins, sensors, watering) to be abstracted behind interfaces for testability
-- Config schema in `core` defines `LogConfig` (level, dest) and `Config.logging[]` — extend for hardware mappings
+- Config schema in `core` exposes a simple `logLevel` — keep runtime logging minimal and consistent
 
 ## Unit Testing
 

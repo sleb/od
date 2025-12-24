@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { file, write } from "bun";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -50,12 +50,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "auth-token-456",
         },
-        logging: [
-          {
-            dest: "console",
-            level: "info",
-          },
-        ],
+        logLevel: "info",
       };
 
       await manager.saveConfig(config);
@@ -77,7 +72,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "auth-token-456",
         },
-        logging: [{ dest: "console", level: "info" }],
+        logLevel: "info",
       };
 
       await manager.saveConfig(config);
@@ -95,7 +90,7 @@ describe("LocalConfigManager", () => {
           name: "Old Device",
           authToken: "old-token",
         },
-        logging: [{ dest: "console", level: "debug" }],
+        logLevel: "debug",
       };
 
       const config2: Config = {
@@ -104,7 +99,7 @@ describe("LocalConfigManager", () => {
           name: "New Device",
           authToken: "new-token",
         },
-        logging: [{ dest: "console", level: "error" }],
+        logLevel: "error",
       };
 
       await manager.saveConfig(config1);
@@ -123,12 +118,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "auth-token-456",
         },
-        logging: [
-          {
-            dest: "console",
-            level: "warn",
-          },
-        ],
+        logLevel: "warn",
       };
 
       await write(configPath, JSON.stringify(config, null, 2));
@@ -137,39 +127,7 @@ describe("LocalConfigManager", () => {
       expect(loaded).toEqual(config);
     });
 
-    test("loads config with multiple logging destinations", async () => {
-      const config: Config = {
-        device: {
-          id: "device-123",
-          name: "Test Device",
-          authToken: "auth-token-456",
-        },
-        logging: [
-          { dest: "console", level: "info" },
-          { dest: "file", level: "debug", path: "/var/log/overdrip.log" },
-        ],
-      };
-
-      await write(configPath, JSON.stringify(config));
-
-      const loaded = await manager.loadConfig();
-      expect(loaded).toEqual(config);
-    });
-
-    test("applies default logging if not provided", async () => {
-      const config = {
-        device: {
-          id: "device-123",
-          name: "Test Device",
-          authToken: "auth-token-456",
-        },
-      };
-
-      await write(configPath, JSON.stringify(config));
-
-      const loaded = await manager.loadConfig();
-      expect(loaded.logging).toEqual([{ dest: "console", level: "info" }]);
-    });
+    // No multiple destinations or default logging in simple schema
 
     test("throws error when config file does not exist", async () => {
       await expect(manager.loadConfig()).rejects.toThrow(
@@ -189,7 +147,7 @@ describe("LocalConfigManager", () => {
       await write(
         configPath,
         JSON.stringify({
-          logging: [{ dest: "console", level: "info" }],
+          logLevel: "info",
         }),
       );
 
@@ -206,7 +164,7 @@ describe("LocalConfigManager", () => {
             name: "Test Device",
             authToken: "auth-token-456",
           },
-          logging: [{ dest: "console", level: "info" }],
+          logLevel: "info",
         }),
       );
 
@@ -215,7 +173,7 @@ describe("LocalConfigManager", () => {
       );
     });
 
-    test("throws error for invalid logging level", async () => {
+    test("throws error for invalid log level", async () => {
       await write(
         configPath,
         JSON.stringify({
@@ -224,7 +182,7 @@ describe("LocalConfigManager", () => {
             name: "Test Device",
             authToken: "auth-token-456",
           },
-          logging: [{ dest: "console", level: "invalid" }],
+          logLevel: "invalid",
         }),
       );
 
@@ -233,23 +191,7 @@ describe("LocalConfigManager", () => {
       );
     });
 
-    test("throws error for invalid file logging (missing path)", async () => {
-      await write(
-        configPath,
-        JSON.stringify({
-          device: {
-            id: "device-123",
-            name: "Test Device",
-            authToken: "auth-token-456",
-          },
-          logging: [{ dest: "file", level: "info" }],
-        }),
-      );
-
-      await expect(manager.loadConfig()).rejects.toThrow(
-        "Failed to load or parse config",
-      );
-    });
+    // No file logging schema in simple config
   });
 
   describe("ConfigSchema", () => {
@@ -260,7 +202,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "auth-token-456",
         },
-        logging: [{ dest: "console", level: "info" }],
+        logLevel: "info",
       };
 
       const result = ConfigSchema.safeParse(config);
@@ -274,7 +216,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "auth-token-456",
         },
-        logging: [{ dest: "console", level: "info" }],
+        logLevel: "info",
       };
 
       const result = ConfigSchema.safeParse(config);
@@ -288,7 +230,7 @@ describe("LocalConfigManager", () => {
           name: "",
           authToken: "auth-token-456",
         },
-        logging: [{ dest: "console", level: "info" }],
+        logLevel: "info",
       };
 
       const result = ConfigSchema.safeParse(config);
@@ -302,7 +244,7 @@ describe("LocalConfigManager", () => {
           name: "Test Device",
           authToken: "",
         },
-        logging: [{ dest: "console", level: "info" }],
+        logLevel: "info",
       };
 
       const result = ConfigSchema.safeParse(config);

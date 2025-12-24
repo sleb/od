@@ -10,7 +10,7 @@ import {
   promptPassword,
 } from "../ui";
 
-const DEFAULT_LOG_LEVEL = "info";
+const DEFAULT_LOG_LEVEL = "info" as const;
 
 export const handleInit = async (configPath: string) => {
   printBanner();
