@@ -85,30 +85,50 @@ See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for arc
 - **Runtime behavior:** Watering config is reloaded each loop; hardware slots are not recreated. The loop interval comes from `device.checkIntervalMs` (optional; defaults to 5000ms).
 
 ```
-          Raspberry Pi (3V3 logic)                      ADS1115 (ADC)
-          ┌──────────────────────────┐                  ┌──────────────┐
-I2C SDA ──┤ GPIO 2 (SDA)        ─────┼──────────────────┤ SDA          │
-I2C SCL ──┤ GPIO 3 (SCL)        ─────┼──────────────────┤ SCL          │
-3V3     ──┤ 3V3                  ─────┼──────────────────┤ VDD          │
-GND     ──┤ GND                  ─────┼──────────────────┤ GND          │
-                                                     A0 ├───── Sensor 1 + (analog)
-                                                     A1 ├───── Sensor 2 + (analog)
-                                              Sensors share GND/3V3
-          └──────────────────────────┘                  └──────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              I2C CONNECTION                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-          Pump Drivers (per pump)                      Pumps (external power)
-          ┌──────────────────────────┐                 ┌──────────────────┐
-GPIO 17 ──┤ Gate (Driver 1)          │                 │ Pump 1 (+)  ─────┤── +V (external)
-GND     ──┤ Source to GND            │                 │ Pump 1 (−)  ──┬──┘
-          │ Drain to Pump −          │                 │              │
-Diode    ─┤ Flyback across pump      │                 │ (flyback)   └─▶ Diode to +V
-          └──────────────────────────┘                 └──────────────────┘
+    Raspberry Pi                         ADS1115 ADC
+    ┌────────────────┐                   ┌──────────────┐
+    │ GPIO 2 (SDA)   ├───────────────────┤ SDA          │
+    │ GPIO 3 (SCL)   ├───────────────────┤ SCL          │
+    │ 3V3            ├───────────────────┤ VDD          │
+    │ GND            ├───────────────────┤ GND          │
+    └────────────────┘                   │              │
+                                         │ A0 ├─────────┤ Sensor 1 (+)
+                                         │ A1 ├─────────┤ Sensor 2 (+)
+                                         └──────────────┘
 
-GPIO 27 drives Driver 2 (same wiring) for Pump 2.
+                                         Sensors share GND/3V3 with ADS1115
 
-Notes:
-- Always use proper driver (MOSFET/transistor) for pumps; never drive pumps directly from Pi GPIO.
-- Use an external power supply for pumps; share GND between Pi and driver circuit.
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            PUMP CONTROL (per pump)                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+    Raspberry Pi        Driver Circuit              External Power
+    ┌──────────────┐    ┌────────────────┐         ┌─────────────────┐
+    │ GPIO 17      ├────┤ Gate           │         │                 │
+    │ (Pump 1)     │    │                │         │ Pump 1 (+) ─────┤─ +V
+    │              │    │ Source         │         │ Pump 1 (-) ──┬──┘
+    │ GND ─────────┼────┤   ↓            │         │              │
+    └──────────────┘    │ Drain ─────────┼─────────┤              │
+                        └────────────────┘         │ Flyback ────┘
+                                                   │ Diode ──────┤─ +V
+                                                   └─────────────────┘
+
+    Note: GPIO 27 drives Pump 2 using identical wiring
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SAFETY NOTES                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+• Use logic-level N-MOSFET (IRLZ44N, IRLZ34N) with gate resistor (100-220Ω)
+• Add pull-down resistor (100kΩ) to prevent floating gates
+• Install flyback diode (1N4007 or 1N5819) across pump leads
+• Use separate power supply for pumps with appropriate fusing
+• Share common ground between Pi, drivers, and pump supply
+• Never apply 5V directly to Pi GPIO pins
 ```
 
 ### Safety & Power
