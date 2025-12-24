@@ -9,7 +9,7 @@
     "lint": "eslint ./src",
     "typecheck": "tsc --noEmit",
     "build": "NODE_ENV=production bun run ./build.ts",
-    "release": "bun run build && bun run ./release.ts"
+    "release": "bun run ./release.ts"
   },
   "devDependencies": {
     "@overdrip/eslint": "workspace:*",

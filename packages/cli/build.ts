@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 
-const build = async (): Promise<void> => {
+export const build = async (): Promise<void> => {
   console.log("🏗️  Building Overdrip CLI...");
 
   const outdir = "dist";
