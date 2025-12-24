@@ -29,6 +29,7 @@ export type RegisterDeviceResponse = z.infer<
 
 export const DeviceConfigSchema = RegisterDeviceResponseSchema.extend({
   name: DeviceName,
+  checkIntervalMs: z.number().int().positive().optional(),
 });
 
 export type DeviceConfig = z.infer<typeof DeviceConfigSchema>;

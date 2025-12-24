@@ -5,6 +5,7 @@ import { DeviceConfigSchema } from "./schemas";
 export const ConfigSchema = z.object({
   device: DeviceConfigSchema,
   logLevel: z.enum(["debug", "info", "warn", "error"]),
+  hardwareMode: z.enum(["mock", "detect"]).optional(),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

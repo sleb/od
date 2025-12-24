@@ -186,6 +186,33 @@ describe("DeviceConfigSchema", () => {
     }
   });
 
+  test("accepts optional checkIntervalMs", () => {
+    const config = {
+      id: "device-123",
+      name: "My Device",
+      authToken: "auth-token-456",
+      checkIntervalMs: 7500,
+    };
+
+    const result = DeviceConfigSchema.safeParse(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.checkIntervalMs).toBe(7500);
+    }
+  });
+
+  test("rejects non-positive checkIntervalMs", () => {
+    const config = {
+      id: "device-123",
+      name: "My Device",
+      authToken: "auth-token-456",
+      checkIntervalMs: 0,
+    };
+
+    const result = DeviceConfigSchema.safeParse(config);
+    expect(result.success).toBe(false);
+  });
+
   test("rejects config with empty name", () => {
     const config = {
       id: "device-123",
