@@ -1,16 +1,16 @@
 import { app, type Overdrip } from "@overdrip/app";
 import { Text } from "ink";
 import { useEffect, useState } from "react";
-import type { StartPageOptions } from "../app";
 import { useConfig } from "../hooks/config-hook";
+import { useQuit } from "../hooks/quit-hook";
 import DeviceAuthRequired from "./device-auth-required";
 import LoadingMessage from "./loading-message";
 
-type Props = { options: StartPageOptions };
-const StartPage = ({ options: { detach } }: Props) => {
-  const configManager = useConfig();
+const StartPage = () => {
   const [message, setMessage] = useState("Starting up...");
   const [overdrip, setOverdrip] = useState<Overdrip | null>(null);
+  const configManager = useConfig();
+  const quit = useQuit();
 
   useEffect(() => {
     const startOverdrip = async () => {
@@ -20,14 +20,16 @@ const StartPage = ({ options: { detach } }: Props) => {
         await odApp.start();
         setMessage("Overdrip started successfully.");
         setOverdrip(odApp);
-      } catch (error) {
+      } catch (err) {
         setMessage(
-          `Error: ${error instanceof Error ? error.message : String(error)}`,
+          `Error: ${err instanceof Error ? err.message : String(err)}`,
         );
+      } finally {
+        quit();
       }
     };
     startOverdrip();
-  }, [configManager, detach]);
+  }, [configManager, quit]);
 
   if (!overdrip) {
     return <LoadingMessage message={message} />;

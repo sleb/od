@@ -1,6 +1,6 @@
 import { LocalConfigManager, onAuthChange, type User } from "@overdrip/core";
 import { render, useApp } from "ink";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfigShowPage from "./components/config-show-page";
 import InitPage from "./components/init-page";
 import Layout from "./components/layout";
@@ -10,14 +10,7 @@ import { ConfigContext } from "./context/config-context";
 import { QuitContext } from "./context/quit-context";
 import { UserContext } from "./context/user-context";
 
-export type StartPageOptions = {
-  detach: boolean;
-};
-
-export type Page =
-  | { name: "init" }
-  | { name: "config-show" }
-  | { name: "start"; options: StartPageOptions };
+export type Page = "init" | "config-show" | "start";
 
 type Props = { page: Page; configPath: string };
 const App = ({ page, configPath }: Props) => {
@@ -26,21 +19,21 @@ const App = ({ page, configPath }: Props) => {
   const [user, setUser] = useState<User | null>(null);
   const { exit } = useApp();
 
-  const quit = () => {
+  const quit = useCallback(() => {
     setShouldQuit(true);
     setTimeout(() => {
       exit();
     }, 100);
-  };
+  }, [exit]);
 
   const route = () => {
-    switch (page.name) {
+    switch (page) {
       case "init":
         return <InitPage />;
       case "config-show":
         return <ConfigShowPage />;
       case "start":
-        return <StartPage options={page.options} />;
+        return <StartPage />;
     }
   };
 
@@ -56,14 +49,23 @@ const App = ({ page, configPath }: Props) => {
 
     return () => controller.abort();
   }, []);
+  const configManager = useMemo(
+    () => new LocalConfigManager(configPath),
+    [configPath],
+  );
+
+  const quitContextValue = useMemo(
+    () => ({ shouldQuit, quit }),
+    [shouldQuit, quit],
+  );
 
   if (loading) {
     return <LoadingMessage message="Loading..." />;
   }
 
   return (
-    <ConfigContext value={new LocalConfigManager(configPath)}>
-      <QuitContext value={{ shouldQuit, quit }}>
+    <ConfigContext value={configManager}>
+      <QuitContext value={quitContextValue}>
         <UserContext value={user}>
           <Layout>{route()}</Layout>
         </UserContext>

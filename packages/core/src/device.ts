@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
-import { CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
+import { auth, CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
+import { info, warn } from "./logger";
 import {
   CreateCustomTokenResponseSchema,
   RegisterDeviceRequestSchema,
@@ -8,6 +9,7 @@ import {
   type RegisterDeviceRequest,
   type RegisterDeviceResponse,
 } from "./schemas";
+import { logInDevice } from "./user";
 
 export { DeviceConfigSchema, DeviceRegistrationSchema } from "./schemas";
 
@@ -55,4 +57,14 @@ export const createCustomToken = async (
   }
 
   return result.data.customToken;
+};
+
+export const ensureAuthenticated = async ({ authToken, id }: DeviceConfig) => {
+  if (auth.currentUser) {
+    info({ message: "User", uid: auth.currentUser.uid });
+    return;
+  }
+
+  warn("No authenticated user found logging in...");
+  await logInDevice(id, authToken);
 };

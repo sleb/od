@@ -59,6 +59,7 @@
       "name": "@overdrip/core",
       "dependencies": {
         "firebase": "^12.6.0",
+        "pino": "^10.1.0",
         "zod": "^4.1.13",
       },
       "devDependencies": {

@@ -31,9 +31,11 @@ const DeviceAuthRequired = ({ children }: Props) => {
       }
     };
 
-    authenticateDevice();
+    if (!user) {
+      authenticateDevice();
+    }
     return () => controller.abort();
-  }, [configManager, quit]);
+  }, [configManager, quit, user]);
 
   if (error) {
     return <Text color="red">{error}</Text>;

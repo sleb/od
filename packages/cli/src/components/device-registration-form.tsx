@@ -10,6 +10,8 @@ type Props = {
   defaultValues?: Partial<DeviceRegistration>;
 };
 
+const DEFAULT_LOG_LEVEL = "info";
+
 const DeviceRegistrationForm = ({ defaultValues }: Props) => {
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +21,7 @@ const DeviceRegistrationForm = ({ defaultValues }: Props) => {
   const handleSubmit = async (name: string) => {
     try {
       const device = await registerDevice(name);
-      await configManager.saveConfig({ device });
+      await configManager.saveConfig({ device, logLevel: DEFAULT_LOG_LEVEL });
       setCompleted(true);
     } catch (err) {
       setError(`Device registration failed: ${err}`);

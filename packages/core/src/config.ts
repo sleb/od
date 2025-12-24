@@ -2,28 +2,9 @@ import { file, write } from "bun";
 import z from "zod";
 import { DeviceConfigSchema } from "./schemas";
 
-const LogLevelSchema = z
-  .enum(["debug", "info", "warn", "error"])
-  .default("info");
-
-const LoggerSchema = z.discriminatedUnion("dest", [
-  z.object({
-    dest: z.literal("console"),
-    level: LogLevelSchema,
-  }),
-  z.object({
-    dest: z.literal("file"),
-    level: LogLevelSchema,
-    path: z.string(),
-  }),
-]);
-
 export const ConfigSchema = z.object({
   device: DeviceConfigSchema,
-  logging: z
-    .array(LoggerSchema)
-    .default([{ dest: "console", level: "info" }])
-    .optional(),
+  logLevel: z.enum(["debug", "info", "warn", "error"]),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

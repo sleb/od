@@ -9,6 +9,10 @@
     "./schemas": {
       "import": "./src/schemas.ts",
       "types": "./src/schemas.ts"
+    },
+    "./logger": {
+      "import": "./src/logger.ts",
+      "types": "./src/logger.ts"
     }
   },
   "devDependencies": {
@@ -22,6 +26,7 @@
   },
   "dependencies": {
     "firebase": "^12.6.0",
+    "pino": "^10.1.0",
     "zod": "^4.1.13"
   }
 }

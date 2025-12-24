@@ -21,7 +21,7 @@ yargs()
     command: ["init", "i"],
     describe: "Initialize Overdrip",
     handler: async ({ path }) => {
-      app({ name: "init" }, path);
+      app("init", path);
     },
   })
   .command({
@@ -33,7 +33,7 @@ yargs()
           command: ["show", "s"],
           describe: "Show current configuration",
           handler: async ({ path }) => {
-            app({ name: "config-show" }, path);
+            app("config-show", path);
           },
         })
         .demandCommand(1, "You need at least one subcommand for 'config'"),
@@ -42,15 +42,8 @@ yargs()
   .command({
     command: ["start", "s"],
     describe: "Start Overdrip",
-    builder: (yargs) =>
-      yargs.option("detach", {
-        alias: "d",
-        type: "boolean",
-        description: "Run Overdrip in the background",
-        default: false,
-      }),
-    handler: async (argv) => {
-      app({ name: "start", options: { detach: argv.detach } }, argv.path);
+    handler: async ({ path }) => {
+      app("start", path);
     },
   })
   .version()
