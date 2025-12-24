@@ -7,6 +7,7 @@ set -e
 REPO="sleb/od"
 BINARY_NAME="overdrip"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+VERSION="${VERSION:-}"  # Override with VERSION=x.y.z or VERSION=dev-abc123
 SERVICE_USER=""
 SERVICE_HOME=""
 CONFIG_PATH=""
@@ -93,13 +94,13 @@ ensure_config() {
   fi
 }
 
-# Get latest release version
+# Get latest stable release version (excludes pre-releases)
 get_latest_version() {
   local version
   version=$(curl -sSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | head -1 | sed -E 's/.*"tag_name": "v?([^"]+)".*/\1/')
 
   if [ -z "$version" ]; then
-    log_error "Could not determine latest version"
+    log_error "Could not determine latest stable version"
     exit 1
   fi
 
@@ -188,12 +189,16 @@ main() {
   # Construct binary name
   BINARY_FILENAME="$BINARY_NAME-$OS-$ARCH"
 
-  # Get latest version
-  log_step "Fetching latest release..."
-  VERSION=$(get_latest_version)
-  log_info "Latest version: v$VERSION"
+  # Get version
+  if [ -z "$VERSION" ]; then
+    log_step "Fetching latest stable release..."
+    VERSION=$(get_latest_version)
+    log_info "Latest stable version: $VERSION"
+  else
+    log_info "Installing version: $VERSION"
+  fi
 
-  # Download URL (version already has correct format from GitHub)
+  # Download URL
   DOWNLOAD_URL="https://github.com/$REPO/releases/download/$VERSION/$BINARY_FILENAME.gz"
 
   # Ensure install directory exists
@@ -238,11 +243,14 @@ main() {
   log_step "Verifying installation..."
 
   if verify_installation; then
-    log_info "Successfully installed $BINARY_NAME v$VERSION"
+    log_info "Successfully installed $BINARY_NAME $VERSION"
     log_info "Service is running and will persist across reboots and logouts"
     log_info "Check service status: systemctl --user status $BINARY_NAME"
     log_info "View logs: journalctl --user -u $BINARY_NAME -f"
     log_info "Config file: $CONFIG_PATH"
+    echo ""
+    log_info "To install a specific version: VERSION=0.2.0 ./install.sh"
+    log_info "To install a dev release: VERSION=dev-abc123 ./install.sh"
   else
     log_error "Installation verification failed"
     rm -f "$INSTALL_DIR/$BINARY_NAME"
