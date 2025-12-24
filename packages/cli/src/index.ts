@@ -3,7 +3,9 @@
 import { homedir } from "node:os";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { app } from "./app";
+import { handleConfigShow } from "./commands/config-show";
+import { handleInit } from "./commands/init";
+import { handleStart } from "./commands/start";
 
 const DEFAULT_CONFIG_PATH = `${homedir()}/.overdrip/config.json`;
 
@@ -21,7 +23,7 @@ yargs()
     command: ["init", "i"],
     describe: "Initialize Overdrip",
     handler: async ({ path }) => {
-      app("init", path);
+      await handleInit(path as string);
     },
   })
   .command({
@@ -33,7 +35,7 @@ yargs()
           command: ["show", "s"],
           describe: "Show current configuration",
           handler: async ({ path }) => {
-            app("config-show", path);
+            await handleConfigShow(path as string);
           },
         })
         .demandCommand(1, "You need at least one subcommand for 'config'"),
@@ -43,7 +45,7 @@ yargs()
     command: ["start", "s"],
     describe: "Start Overdrip",
     handler: async ({ path }) => {
-      app("start", path);
+      await handleStart(path as string);
     },
   })
   .version()
