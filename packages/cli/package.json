@@ -1,6 +1,7 @@
 {
   "name": "@overdrip/cli",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "drip": "./src/index.ts"
   },

@@ -1,6 +1,7 @@
 {
   "name": "@overdrip/eslint",
   "type": "module",
+  "license": "MIT",
   "exports": {
     ".": {
       "import": "./src/index.ts",

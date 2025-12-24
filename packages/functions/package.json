@@ -1,5 +1,6 @@
 {
   "name": "@overdrip/functions",
+  "license": "MIT",
   "scripts": {
     "lint": "eslint ./src",
     "build": "bun run build.ts",
