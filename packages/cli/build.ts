@@ -3,6 +3,12 @@ import { rm } from "node:fs/promises";
 export const build = async (): Promise<void> => {
   console.log("🏗️  Building Overdrip CLI...");
 
+  if (process.env.NODE_ENV !== "production") {
+    throw new Error(
+      "NODE_ENV must be set to 'production' to run the build script.",
+    );
+  }
+
   const outdir = "dist";
   const targets: [Bun.Build.Target, string][] = [
     ["bun-linux-arm64", "linux-arm64"],
