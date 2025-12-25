@@ -6,7 +6,8 @@ import { file, write } from "bun";
 import { build } from "./build";
 
 
-type ReleaseType = "major" | "minor" | "patch" | "development";
+const ReleaseTypes = ["major", "minor", "patch", "development"] as const;
+type ReleaseType = typeof ReleaseTypes[number];
 
 const assets = [
   "dist/overdrip-linux-arm64",
@@ -27,14 +28,16 @@ const parseCliArgs = (): { releaseType: ReleaseType } => {
     strict: true,
   });
 
-  const releaseType = values["release-type"] as string;
-  if (!["major", "minor", "patch", "development"].includes(releaseType)) {
+  const releaseType = values["release-type"] as ReleaseType;
+  if (!ReleaseTypes.includes(releaseType)) {
     throw new Error(
-      `Invalid release-type: ${releaseType}. Must be one of: major, minor, patch, development`,
+      `Invalid release type: ${releaseType}. Must be one of: ${ReleaseTypes.join(
+        ", ",
+      )}`,
     );
   }
 
-  return { releaseType: releaseType as ReleaseType };
+  return { releaseType };
 };
 
 const ensureGh = async () => {
