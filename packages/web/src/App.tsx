@@ -1,5 +1,7 @@
+import LoginPage from "./components/login/login-page";
+
 export const App = () => {
-  return <div>Hello, world!</div>;
+  return <LoginPage />;
 };
 
 export default App;

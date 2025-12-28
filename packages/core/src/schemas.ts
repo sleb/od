@@ -42,6 +42,14 @@ export const DeviceRegistrationSchema = RegisterDeviceResponseSchema.extend({
 
 export type DeviceRegistration = z.infer<typeof DeviceRegistrationSchema>;
 
+export const ConfigSchema = z.object({
+  device: DeviceConfigSchema,
+  logLevel: z.enum(["debug", "info", "warn", "error"]),
+  hardwareMode: z.enum(["mock", "detect"]).optional(),
+});
+
+export type Config = z.infer<typeof ConfigSchema>;
+
 export const CreateCustomTokenRequestSchema = z.object({
   id: DeviceId,
   authToken: AuthToken,

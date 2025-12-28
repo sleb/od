@@ -1,14 +1,6 @@
 import { file, write } from "bun";
-import z from "zod";
-import { DeviceConfigSchema } from "./schemas";
+import { ConfigSchema, type Config } from "./schemas";
 
-export const ConfigSchema = z.object({
-  device: DeviceConfigSchema,
-  logLevel: z.enum(["debug", "info", "warn", "error"]),
-  hardwareMode: z.enum(["mock", "detect"]).optional(),
-});
-
-export type Config = z.infer<typeof ConfigSchema>;
 export interface ConfigManager {
   path(): string;
   loadConfig(): Promise<Config>;

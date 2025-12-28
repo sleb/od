@@ -1,3 +1,5 @@
+import { FirebaseError } from "firebase/app";
+import { signInWithCustomToken } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
 import { info, warn } from "./logger";
@@ -9,9 +11,26 @@ import {
   type RegisterDeviceRequest,
   type RegisterDeviceResponse,
 } from "./schemas";
-import { logInDevice } from "./user";
 
 export { DeviceConfigSchema, DeviceRegistrationSchema } from "./schemas";
+
+export const logInDevice = async (
+  deviceId: string,
+  authCode: string,
+): Promise<void> => {
+  try {
+    const token = await createCustomToken(deviceId, authCode);
+    await signInWithCustomToken(auth, token);
+  } catch (err) {
+    if (err instanceof FirebaseError) {
+      throw new Error(
+        `Error logging in device: ${err.message}, code: ${err.code}`,
+      );
+    }
+
+    throw new Error(`Error logging in device: ${err}`);
+  }
+};
 
 export const registerDevice = async (name: string): Promise<DeviceConfig> => {
   const registerDeviceCallable = httpsCallable<

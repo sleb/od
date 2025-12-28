@@ -1,10 +1,5 @@
 import { FirebaseError } from "firebase/app";
-import {
-  onAuthStateChanged,
-  signInWithCustomToken,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { createCustomToken } from "./device";
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./firebase";
 import { type User } from "./schemas";
 
@@ -43,23 +38,5 @@ export const logInUser = async (email: string, password: string) => {
     }
 
     throw new Error(`Error logging in: ${error}`);
-  }
-};
-
-export const logInDevice = async (
-  deviceId: string,
-  authCode: string,
-): Promise<void> => {
-  try {
-    const token = await createCustomToken(deviceId, authCode);
-    await signInWithCustomToken(auth, token);
-  } catch (err) {
-    if (err instanceof FirebaseError) {
-      throw new Error(
-        `Error logging in device: ${err.message}, code: ${err.code}`,
-      );
-    }
-
-    throw new Error(`Error logging in device: ${err}`);
   }
 };
