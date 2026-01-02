@@ -1,16 +1,18 @@
-import React from "react";
+import "@/global.css";
+import { router } from "@/router";
+import { StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { App } from "./App";
+import { RouterProvider } from "react-router-dom";
+import Loading from "./components/loading";
 
-const router = createBrowserRouter([{ path: "/*", element: <App /> }]);
-
-const start = () => {
+const start = async () => {
   const root = createRoot(document.getElementById("root")!);
   root.render(
-    <React.StrictMode>
-      <RouterProvider router={router} />
-    </React.StrictMode>,
+    <StrictMode>
+      <Suspense fallback={<Loading />}>
+        <RouterProvider router={router} />
+      </Suspense>
+    </StrictMode>,
   );
 };
 

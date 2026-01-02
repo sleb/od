@@ -3,9 +3,9 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+    "./config": {
+      "import": "./src/config.ts",
+      "types": "./src/config.ts"
     },
     "./schemas": {
       "import": "./src/schemas.ts",
@@ -18,6 +18,14 @@
     "./user": {
       "import": "./src/user.ts",
       "types": "./src/user.ts"
+    },
+    "./auth": {
+      "import": "./src/auth.ts",
+      "types": "./src/auth.ts"
+    },
+    "./device": {
+      "import": "./src/device.ts",
+      "types": "./src/device.ts"
     }
   },
   "devDependencies": {
