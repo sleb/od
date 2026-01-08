@@ -26,6 +26,10 @@
     "./device": {
       "import": "./src/device.ts",
       "types": "./src/device.ts"
+    },
+    "./metrics": {
+      "import": "./src/metrics.ts",
+      "types": "./src/metrics.ts"
     }
   },
   "devDependencies": {

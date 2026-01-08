@@ -67,3 +67,31 @@ export const CreateCustomTokenResponseSchema = z.object({
 export type CreateCustomTokenResponse = z.infer<
   typeof CreateCustomTokenResponseSchema
 >;
+
+// Metrics schemas
+export const MetricTypeSchema = z.enum(["moisture"]);
+
+export type MetricType = z.infer<typeof MetricTypeSchema>;
+
+export const MetricDataPointSchema = z.object({
+  type: MetricTypeSchema,
+  value: z.number(),
+  plantId: z.string().min(1),
+  timestamp: z.number().int().positive(),
+});
+
+export type MetricDataPoint = z.infer<typeof MetricDataPointSchema>;
+
+export const WriteMetricsRequestSchema = z.object({
+  deviceId: DeviceId,
+  metrics: z.array(MetricDataPointSchema).min(1),
+});
+
+export type WriteMetricsRequest = z.infer<typeof WriteMetricsRequestSchema>;
+
+export const WriteMetricsResponseSchema = z.object({
+  success: z.boolean(),
+  metricsWritten: z.number().int().nonnegative(),
+});
+
+export type WriteMetricsResponse = z.infer<typeof WriteMetricsResponseSchema>;

@@ -49,7 +49,8 @@ Configuration is stored at `~/.overdrip/config.json` by default.
 - 🌱 **Web-first setup** — Authenticate with email/password, register devices
 - 🔐 **Secure device auth** — Devices authenticate with custom Firebase tokens
 - 📱 **Stateful config** — Local configuration persists across reboots
-- 📊 **Future: Backend stats** — Monitor watering history and plant health
+- 📊 **Cloud metrics** — Moisture readings sent to Google Cloud Monitoring via Firebase
+- 📈 **Future: Backend stats** — Monitor watering history and plant health
 
 ## What's Next
 

@@ -1,4 +1,4 @@
-import { type Config } from "@overdrip/core";
+import { type Config } from "@overdrip/core/schemas";
 
 export type PlantConfig = {
   id: string;

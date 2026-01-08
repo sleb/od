@@ -1,5 +1,6 @@
-import { type Config } from "@overdrip/core";
+import { type Config } from "@overdrip/core/schemas";
 import { debug, info, setLogLevel, warn } from "@overdrip/core/logger";
+import { writeMetrics, type MetricDataPoint } from "@overdrip/core/metrics";
 import { createHardwareFactory } from "./hardware/factory";
 import {
   type HardwareFactory,
@@ -168,6 +169,9 @@ class App implements Overdrip {
       "Moisture reading",
     );
 
+    // Emit moisture metric to Cloud Monitoring
+    await this.emitMoistureMetric(plant.id, reading.percent);
+
     const now = Date.now();
     const timeSinceLast = plant.slot.lastWateredAt
       ? now - plant.slot.lastWateredAt
@@ -222,6 +226,22 @@ class App implements Overdrip {
       },
       "Post-watering moisture reading",
     );
+  }
+
+  private async emitMoistureMetric(plantId: string, moisturePercent: number) {
+    try {
+      const metric: MetricDataPoint = {
+        type: "moisture",
+        value: moisturePercent,
+        plantId,
+        timestamp: Date.now(),
+      };
+
+      await writeMetrics(this.config.device.id, [metric]);
+    } catch (error) {
+      // Log but don't fail the cycle on metrics errors
+      warn({ plantId, error }, "Failed to emit moisture metric");
+    }
   }
 
   private registerSignalHandlers() {
