@@ -12,6 +12,7 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconChevronDown,
+  IconDashboard,
   IconDevices,
   IconHome,
   IconLogout,
@@ -87,6 +88,13 @@ const AppShell = () => {
           end
           label="Home"
           leftSection={<IconHome size={20} />}
+        />
+        <NavLink
+          component={RouterNavLink}
+          to="/dashboard"
+          end
+          label="Dashboard"
+          leftSection={<IconDashboard size={20} />}
         />
         <NavLink
           component={RouterNavLink}
