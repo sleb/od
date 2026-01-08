@@ -12,9 +12,9 @@
     "test:e2e:debug": "firebase emulators:exec --project demo-test 'playwright test --debug'"
   },
   "dependencies": {
-    "@mantine/core": "7",
-    "@mantine/form": "7",
-    "@mantine/hooks": "7",
+    "@mantine/core": "8.3.11",
+    "@mantine/form": "8.3.11",
+    "@mantine/hooks": "8.3.11",
     "@overdrip/core": "workspace:*",
     "@tabler/icons-react": "^3.36.1",
     "react": "^19",
