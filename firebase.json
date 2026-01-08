@@ -25,9 +25,18 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "public": "packages/web/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "predeploy": ["cp install.sh public/install.sh"],
+    "predeploy": [
+      "cd packages/web && bun run build",
+      "cp install.sh packages/web/dist/install.sh"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
     "headers": [
       {
         "source": "**/*.sh",
