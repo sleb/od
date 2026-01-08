@@ -10,7 +10,7 @@ export const onAuthChange = (
     auth,
     (firebaseUser) => {
       if (firebaseUser) {
-        next({ uid: firebaseUser.uid });
+        next({ uid: firebaseUser.uid, email: firebaseUser.email });
       } else {
         next(null);
       }

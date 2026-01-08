@@ -1,18 +1,16 @@
-import { useUser } from "@/hooks/user";
-import { logOut } from "@overdrip/core/auth";
-import { Button, Container, Stack, Text, Title } from "@mantine/core";
+import { Container, Stack, Text, Title } from "@mantine/core";
 
 const HomePage = () => {
-  const user = useUser();
-
   return (
-    <Container size="sm" py="xl">
+    <Container size="lg">
       <Stack gap="lg">
-        <Title order={1}>💧 Overdrip</Title>
-        <Text>Welcome, {user.uid}</Text>
-        <Button onClick={logOut} variant="outline">
-          Log out
-        </Button>
+        <Title order={1}>Dashboard</Title>
+        <Text size="lg">
+          Welcome to Overdrip! Your plant watering system is ready to go.
+        </Text>
+        <Text c="dimmed">
+          Use the navigation to configure your devices and monitor your plants.
+        </Text>
       </Stack>
     </Container>
   );

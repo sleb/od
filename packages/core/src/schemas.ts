@@ -3,6 +3,7 @@ import z from "zod";
 // User schemas
 export const UserSchema = z.object({
   uid: z.string().min(1),
+  email: z.string().email().nullable().optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
