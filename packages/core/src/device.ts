@@ -1,18 +1,24 @@
 import { FirebaseError } from "firebase/app";
 import { signInWithCustomToken } from "firebase/auth";
+import { collection, onSnapshot, query } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { auth, CREATE_CUSTOM_TOKEN_URL, functions } from "./firebase";
+import { auth, CREATE_CUSTOM_TOKEN_URL, db, functions } from "./firebase";
 import { info, warn } from "./logger";
 import {
   CreateCustomTokenResponseSchema,
   RegisterDeviceRequestSchema,
   RegisterDeviceResponseSchema,
   type DeviceConfig,
+  type DeviceRegistration,
   type RegisterDeviceRequest,
   type RegisterDeviceResponse,
 } from "./schemas";
 
-export { DeviceConfigSchema, DeviceRegistrationSchema } from "./schemas";
+export {
+  DeviceConfigSchema,
+  DeviceRegistrationSchema,
+  type DeviceRegistration,
+} from "./schemas";
 
 export const logInDevice = async (
   deviceId: string,
@@ -86,4 +92,60 @@ export const ensureAuthenticated = async ({ authToken, id }: DeviceConfig) => {
 
   warn("No authenticated user found logging in...");
   await logInDevice(id, authToken);
+};
+
+/**
+ * Subscribe to all devices for the current authenticated user.
+ * Returns an unsubscribe function.
+ */
+export const subscribeToDevices = (
+  userId: string,
+  onDevices: (devices: DeviceRegistration[]) => void,
+  onError: (error: Error) => void,
+): (() => void) => {
+  const devicesRef = collection(db, `users/${userId}/devices`);
+  const q = query(devicesRef);
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const devicesList: DeviceRegistration[] = [];
+      snapshot.forEach((doc) => {
+        devicesList.push({ ...doc.data(), id: doc.id } as DeviceRegistration);
+      });
+      onDevices(devicesList);
+    },
+    (err) => {
+      onError(err as Error);
+    },
+  );
+};
+
+/**
+ * Subscribe to a single device for the current authenticated user.
+ * Returns an unsubscribe function.
+ */
+export const subscribeToDevice = (
+  userId: string,
+  deviceId: string,
+  onDevice: (device: DeviceRegistration | null) => void,
+  onError: (error: Error) => void,
+): (() => void) => {
+  const devicesRef = collection(db, `users/${userId}/devices`);
+  const q = query(devicesRef);
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const foundDevice = snapshot.docs.find((doc) => doc.id === deviceId);
+      if (foundDevice) {
+        onDevice({ ...foundDevice.data(), id: foundDevice.id } as DeviceRegistration);
+      } else {
+        onDevice(null);
+      }
+    },
+    (err) => {
+      onError(err as Error);
+    },
+  );
 };

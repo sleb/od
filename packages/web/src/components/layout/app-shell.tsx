@@ -5,12 +5,19 @@ import {
   Burger,
   Group,
   Menu,
+  NavLink,
   Text,
   UnstyledButton,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconChevronDown, IconLogout, IconUser } from "@tabler/icons-react";
-import { Outlet } from "react-router-dom";
+import {
+  IconChevronDown,
+  IconDevices,
+  IconHome,
+  IconLogout,
+  IconUser,
+} from "@tabler/icons-react";
+import { NavLink as RouterNavLink, Outlet } from "react-router-dom";
 
 const AppShell = () => {
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
@@ -74,13 +81,19 @@ const AppShell = () => {
       </MantineAppShell.Header>
 
       <MantineAppShell.Navbar p="md">
-        <Text size="sm" fw={500} mb="md">
-          Navigation
-        </Text>
-        {/* Add navigation links here as needed */}
-        <Text size="sm" c="dimmed">
-          Dashboard and controls coming soon...
-        </Text>
+        <NavLink
+          component={RouterNavLink}
+          to="/"
+          end
+          label="Home"
+          leftSection={<IconHome size={20} />}
+        />
+        <NavLink
+          component={RouterNavLink}
+          to="/devices"
+          label="Devices"
+          leftSection={<IconDevices size={20} />}
+        />
       </MantineAppShell.Navbar>
 
       <MantineAppShell.Main>

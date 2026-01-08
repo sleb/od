@@ -1,7 +1,6 @@
 import pino from "pino";
 
-// Send logs to stderr so they don't disrupt Ink's stdout UI
-const logger = pino({ level: "info" }, process.stderr);
+const logger = pino({ level: "info" });
 
 export const debug = logger.debug.bind(logger);
 export const error = logger.error.bind(logger);
