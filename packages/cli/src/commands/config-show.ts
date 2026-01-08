@@ -1,4 +1,4 @@
-import { LocalConfigManager } from "@overdrip/core";
+import { LocalConfigManager } from "@overdrip/core/config";
 import { printError, printHeader, printJSON, printWarning } from "../ui";
 
 export const handleConfigShow = async (configPath: string) => {

@@ -1,5 +1,6 @@
 import { app as appFactory, type Overdrip } from "@overdrip/app";
-import { LocalConfigManager, logInDevice } from "@overdrip/core";
+import { LocalConfigManager } from "@overdrip/core/config";
+import { logInDevice } from "@overdrip/core/device";
 import { printBanner, printError, printInfo, printSuccess } from "../ui";
 
 export const handleStart = async (configPath: string) => {

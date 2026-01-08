@@ -1,4 +1,6 @@
-import { LocalConfigManager, logInUser, registerDevice } from "@overdrip/core";
+import { LocalConfigManager } from "@overdrip/core/config";
+import { logInUser } from "@overdrip/core/user";
+import { registerDevice } from "@overdrip/core/device";
 import {
   confirmAction,
   printBanner,
