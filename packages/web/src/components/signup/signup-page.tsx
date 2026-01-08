@@ -1,32 +1,34 @@
-import { logInUser } from "@overdrip/core/user";
+import { signUpUser } from "@overdrip/core/user";
 import {
+  Anchor,
   Button,
   PasswordInput,
   Stack,
   Text,
   TextInput,
-  Anchor,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthFormLayout from "../auth/auth-form-layout";
 
-type LoginForm = {
+type SignUpForm = {
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
-const LoginPage = () => {
+const SignUpPage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const form = useForm<LoginForm>({
+  const form = useForm<SignUpForm>({
     initialValues: {
       email: "",
       password: "",
+      confirmPassword: "",
     },
     validate: {
       email: (value) => {
@@ -36,24 +38,33 @@ const LoginPage = () => {
         }
         return null;
       },
-      password: (value) => (value ? null : "Password is required"),
+      password: (value) => {
+        if (!value) return "Password is required";
+        if (value.length < 6) return "Password must be at least 6 characters";
+        return null;
+      },
+      confirmPassword: (value, values) => {
+        if (!value) return "Please confirm your password";
+        if (value !== values.password) return "Passwords do not match";
+        return null;
+      },
     },
   });
 
-  const handleSubmit = async (values: LoginForm) => {
+  const handleSubmit = async (values: SignUpForm) => {
     setAuthError(null);
     setAuthSuccess(false);
     setIsSubmitting(true);
 
     try {
-      await logInUser(values.email, values.password);
+      await signUpUser(values.email, values.password);
       setAuthSuccess(true);
       navigate("/");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Unable to log in. Please try again.";
+          : "Unable to create account. Please try again.";
       setAuthError(message);
     } finally {
       setIsSubmitting(false);
@@ -62,10 +73,10 @@ const LoginPage = () => {
 
   return (
     <AuthFormLayout
-      title="Welcome back"
-      subtitle="Sign in to manage your devices"
+      title="Create your account"
+      subtitle="Sign up to start managing your plant watering"
       error={authError}
-      success={authSuccess ? "Signed in successfully!" : null}
+      success={authSuccess ? "Account created successfully!" : null}
     >
       <form onSubmit={form.onSubmit(handleSubmit)} noValidate>
         <Stack gap="md">
@@ -79,19 +90,26 @@ const LoginPage = () => {
 
           <PasswordInput
             label="Password"
-            placeholder="Enter your password"
-            autoComplete="current-password"
+            placeholder="Create a password"
+            autoComplete="new-password"
             {...form.getInputProps("password")}
           />
 
+          <PasswordInput
+            label="Confirm password"
+            placeholder="Confirm your password"
+            autoComplete="new-password"
+            {...form.getInputProps("confirmPassword")}
+          />
+
           <Button type="submit" fullWidth loading={isSubmitting} mt="sm">
-            Sign in
+            Create account
           </Button>
 
           <Text ta="center" size="sm" c="dimmed">
-            Don&apos;t have an account?{" "}
-            <Anchor href="/signup" c="blue">
-              Sign up
+            Already have an account?{" "}
+            <Anchor href="/login" c="blue">
+              Sign in
             </Anchor>
           </Text>
         </Stack>
@@ -100,4 +118,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignUpPage;
