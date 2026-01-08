@@ -3,6 +3,7 @@ import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig } from "eslint/config";
 import globals from "globals";
+import prettier from "eslint-config-prettier";
 
 export default defineConfig([
   ...sharedEslintConfig,
@@ -24,4 +25,5 @@ export default defineConfig([
     settings: { react: { version: "detect" } },
     extends: [reactHooks.configs.flat.recommended],
   },
+  prettier,
 ]);

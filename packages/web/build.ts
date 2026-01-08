@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import plugin from "bun-plugin-tailwind";
+
 import { existsSync } from "fs";
 import { rm } from "fs/promises";
 import path from "path";
@@ -32,7 +32,7 @@ export const build = async () => {
   const result = await Bun.build({
     entrypoints: ["src/index.html"],
     outdir,
-    plugins: [plugin],
+    plugins: [],
     minify: true,
     target: "browser",
     sourcemap: "linked",

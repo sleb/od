@@ -9,25 +9,26 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@mantine/core": "7",
+    "@mantine/form": "7",
+    "@mantine/hooks": "7",
     "@overdrip/core": "workspace:*",
-    "bun-plugin-tailwind": "^0.1.2",
-    "daisyui": "^5.5.14",
+    "@tabler/icons-react": "^3.36.1",
     "react": "^19",
     "react-dom": "^19",
-    "react-hook-form": "^7.69.0",
-    "react-router-dom": "^7.11.0",
-    "tailwindcss": "^4.1.11"
+    "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
     "@overdrip/eslint": "workspace:*",
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/parser": "^8.51.0",
     "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "prettier": "^3.7.4",
-    "prettier-plugin-tailwindcss": "^0.7.2"
+    "prettier": "^3.7.4"
   }
 }

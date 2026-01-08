@@ -1,6 +1,19 @@
 import { logInUser } from "@overdrip/core/user";
+import {
+  Alert,
+  Box,
+  Button,
+  Container,
+  Paper,
+  PasswordInput,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { useForm } from "@mantine/form";
+import { IconAlertCircle, IconCheck } from "@tabler/icons-react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 type LoginForm = {
@@ -11,19 +24,30 @@ type LoginForm = {
 const LoginPage = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccess, setAuthSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
-    defaultValues: { email: "", password: "" },
+  const form = useForm<LoginForm>({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+    validate: {
+      email: (value) => {
+        if (!value) return "Email is required";
+        if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(value)) {
+          return "Invalid email address";
+        }
+        return null;
+      },
+      password: (value) => (value ? null : "Password is required"),
+    },
   });
 
-  const onSubmit = async (values: LoginForm) => {
+  const handleSubmit = async (values: LoginForm) => {
     setAuthError(null);
     setAuthSuccess(false);
+    setIsSubmitting(true);
 
     try {
       await logInUser(values.email, values.password);
@@ -35,97 +59,94 @@ const LoginPage = () => {
           ? err.message
           : "Unable to log in. Please try again.";
       setAuthError(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-slate-950 via-slate-900 to-slate-950 px-6 py-10 text-slate-100">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900/80 p-8 shadow-2xl backdrop-blur">
-        <h1 className="mb-2 text-2xl font-bold tracking-tight">
-          Overdrip login
-        </h1>
-        <p className="mb-5 leading-relaxed text-slate-300">
-          Sign in with your email to access your devices.
-        </p>
+    <Box
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "var(--mantine-color-gray-0)",
+        padding: "1rem",
+      }}
+    >
+      <Container size="xs" w="100%">
+        <Stack gap="xl" mb="xl">
+          <Box ta="center">
+            <Title order={1} size="3.5rem" mb="sm">
+              💧 Overdrip
+            </Title>
+            <Text c="dimmed">Plant watering made simple</Text>
+          </Box>
 
-        {authError && (
-          <div className="mb-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm leading-relaxed text-rose-50">
-            {authError}
-          </div>
-        )}
+          <Paper shadow="md" p="xl" radius="md">
+            <Stack gap="md">
+              <Box>
+                <Title order={2} size="1.75rem" mb={4}>
+                  Welcome back
+                </Title>
+                <Text c="dimmed" size="sm" mb="lg">
+                  Sign in to manage your devices
+                </Text>
+              </Box>
 
-        {authSuccess && (
-          <div className="mb-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm leading-relaxed text-emerald-50">
-            Signed in successfully.
-          </div>
-        )}
+              {authError && (
+                <Alert
+                  icon={<IconAlertCircle size={16} />}
+                  color="red"
+                  title="Error"
+                >
+                  {authError}
+                </Alert>
+              )}
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="space-y-3"
-        >
-          <div className="flex flex-col gap-2">
-            <label
-              htmlFor="email"
-              className="text-sm font-semibold text-slate-200"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-slate-100 transition outline-none placeholder:text-slate-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/30"
-              placeholder="you@example.com"
-              {...register("email", { required: "Email is required" })}
-            />
-            {errors.email?.message && (
-              <span className="text-xs font-medium text-rose-200">
-                {errors.email.message}
-              </span>
-            )}
-          </div>
+              {authSuccess && (
+                <Alert
+                  icon={<IconCheck size={16} />}
+                  color="green"
+                  title="Success"
+                >
+                  Signed in successfully!
+                </Alert>
+              )}
 
-          <div className="flex flex-col gap-2">
-            <label
-              htmlFor="password"
-              className="text-sm font-semibold text-slate-200"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-slate-100 transition outline-none placeholder:text-slate-500 focus:border-violet-300 focus:ring-2 focus:ring-violet-300/30"
-              placeholder="••••••••"
-              {...register("password", { required: "Password is required" })}
-            />
-            {errors.password?.message && (
-              <span className="text-xs font-medium text-rose-200">
-                {errors.password.message}
-              </span>
-            )}
-          </div>
+              <form onSubmit={form.onSubmit(handleSubmit)} noValidate>
+                <Stack gap="md">
+                  <TextInput
+                    label="Email address"
+                    placeholder="your@email.com"
+                    type="email"
+                    autoComplete="email"
+                    {...form.getInputProps("email")}
+                  />
 
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-linear-to-r from-cyan-300 to-violet-400 px-4 py-3 text-sm font-semibold text-slate-900 shadow-lg shadow-cyan-300/25 transition hover:translate-y-px hover:shadow-cyan-300/30 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <div className="flex flex-row justify-center gap-2">
-                <span className="loading loading-spinner"></span>
-                Signing in...
-              </div>
-            ) : (
-              "Sign in"
-            )}
-          </button>
-        </form>
-      </div>
-    </div>
+                  <PasswordInput
+                    label="Password"
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    {...form.getInputProps("password")}
+                  />
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    loading={isSubmitting}
+                    mt="sm"
+                  >
+                    Sign in
+                  </Button>
+                </Stack>
+              </form>
+            </Stack>
+          </Paper>
+        </Stack>
+      </Container>
+    </Box>
   );
 };
 
