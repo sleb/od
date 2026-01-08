@@ -192,6 +192,46 @@ await write(path, JSON.stringify(config, null, 2));
 
 **Run tests:** `bun test` from workspace root or per-package.
 
+## E2E Testing (Web Package)
+
+**Location:** `packages/web/tests/` — Playwright e2e tests for web UI flows.
+
+**Test suite (6 focused tests):**
+- `auth.spec.ts` — 1 test: full auth cycle (signup → logout → login)
+- `protected-routes.spec.ts` — 2 tests: unauthenticated/authenticated route access
+- `devices.spec.ts` — 3 tests: page load, empty state, navigation
+
+**Running tests:**
+```bash
+# Tests auto-start/stop emulators via firebase emulators:exec
+cd packages/web
+bunx playwright install chromium  # First time only
+bun run test:e2e           # Auto-starts emulators, runs tests
+bun run test:e2e:ui        # Interactive UI mode (recommended)
+bun run test:e2e:debug     # Debug mode
+```
+
+**Key helpers (in `helpers.ts`):**
+- `signUp(page, email, password)` — Sign up new user
+- `logIn(page, email, password)` — Log in existing user
+- `logOut(page)` — Log out current user
+- `isAuthenticated(page)` — Check auth state (returns boolean)
+- `generateTestEmail()` — Create unique test email
+- `TEST_DEVICES` — Expected test devices for seeding
+
+**Philosophy:**
+- Focus on user flows, not implementation details
+- One comprehensive test > many redundant tests
+- Skip gracefully when test data unavailable (devices tests)
+- Use helpers for cleaner, more maintainable tests
+
+**Test data seeding:**
+- Devices can only be registered via CLI (not web UI)
+- Device list tests skip if no devices seeded in Firestore emulator
+- Register test devices via: `cd packages/cli && bun run src/index.ts init`
+
+See `packages/web/tests/README.md` for detailed docs.
+
 ## Validation checklist
 
 When making changes:

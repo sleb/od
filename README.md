@@ -64,10 +64,23 @@ To contribute:
 
 ```bash
 bun install                                     # Install all packages
-bun test                                        # Run tests
+bun test                                        # Run unit tests (core, functions)
+cd packages/web && bun run test:e2e             # Run web e2e tests (requires emulators)
 cd packages/cli && bun run lint                 # Lint
 cd packages/cli && NODE_ENV=production bun run build  # Build for production
 ```
+
+### E2E Tests (Web)
+
+The web package has 6 focused Playwright tests (auth, protected routes, devices):
+
+```bash
+cd packages/web
+bun run test:e2e        # Auto-starts emulators, runs tests
+bun run test:e2e:ui     # Interactive mode (recommended)
+```
+
+See [`packages/web/tests/README.md`](packages/web/tests/README.md) for details.
 
 See [`.github/copilot-instructions.md`](.github/copilot-instructions.md) for architecture details and development patterns.
 

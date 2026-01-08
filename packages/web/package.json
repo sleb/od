@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "build": "NODE_ENV=production bun run build.ts",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "firebase emulators:exec --project demo-test 'playwright test'",
+    "test:e2e:ui": "firebase emulators:exec --project demo-test 'playwright test --ui'",
+    "test:e2e:debug": "firebase emulators:exec --project demo-test 'playwright test --debug'"
   },
   "dependencies": {
     "@mantine/core": "7",
@@ -29,6 +32,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "globals": "^16.5.0",
-    "prettier": "^3.7.4"
+    "prettier": "^3.7.4",
+    "@playwright/test": "^1.49.0"
   }
 }

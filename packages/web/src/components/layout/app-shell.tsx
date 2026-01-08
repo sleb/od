@@ -49,7 +49,7 @@ const AppShell = () => {
 
           <Menu shadow="md" width={200} position="bottom-end">
             <Menu.Target>
-              <UnstyledButton>
+              <UnstyledButton data-testid="user-menu-button">
                 <Group gap="xs">
                   <IconUser size={20} />
                   <Text size="sm" fw={500}>
