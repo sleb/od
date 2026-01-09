@@ -50,13 +50,29 @@ Configuration is stored at `~/.overdrip/config.json` by default.
 - 🔐 **Secure device auth** — Devices authenticate with custom Firebase tokens
 - 📱 **Stateful config** — Local configuration persists across reboots
 - 📊 **Cloud metrics** — Moisture readings sent to Google Cloud Monitoring via Firebase
-- 📈 **Future: Backend stats** — Monitor watering history and plant health
+- 📈 **Device stats dashboard** — View historical moisture data with interactive charts (time range selector)
+- 🌿 **Multi-plant tracking** — Monitor multiple plants per device with separate trend lines
+
+## Device Metrics Dashboard
+
+The web dashboard includes an interactive stats page for each device showing moisture sensor data over time:
+
+- **Time range selector:** View metrics for 1h, 6h, 24h, or 7 days
+- **Multi-plant support:** Each plant shows as a separate line on the chart
+- **Real-time data:** Queries Cloud Monitoring API for accurate historical data
+- **Secure:** Server-side authorization ensures users only see their own devices' metrics
+
+### How It Works
+
+1. Device sends moisture readings to Cloud Monitoring via `writeMetrics` Cloud Function
+2. Web dashboard calls `readMetrics` Cloud Function to fetch historical data
+3. Cloud Function verifies device ownership in Firestore before returning data
+4. React component renders interactive charts with Recharts
 
 ## What's Next
 
 - Device runtime with GPIO control
 - Watering schedule management
-- Cloud dashboard (Firebase Firestore)
 - Mobile companion app (planned)
 
 ## Development

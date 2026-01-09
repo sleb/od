@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
 import { ReadMetricsRequestSchema } from "@overdrip/core/schemas";
+import { describe, expect, test } from "bun:test";
 import { HttpsError } from "firebase-functions/https";
 
 describe("readMetrics - Unit Tests", () => {

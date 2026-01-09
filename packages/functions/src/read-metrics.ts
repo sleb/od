@@ -1,3 +1,4 @@
+import { MetricServiceClient } from "@google-cloud/monitoring";
 import {
   ReadMetricsRequestSchema,
   type ReadMetricsRequest,
@@ -6,9 +7,11 @@ import {
 import { HttpsError, onCall } from "firebase-functions/https";
 import { error, info } from "firebase-functions/logger";
 import { app } from "./firebase";
-import { MetricServiceClient } from "@google-cloud/monitoring";
 
 const metricsClient = new MetricServiceClient();
+const isEmulator =
+  process.env.FUNCTIONS_EMULATOR === "true" ||
+  Boolean(process.env.FIRESTORE_EMULATOR_HOST);
 
 export const readMetrics = onCall<
   ReadMetricsRequest,
@@ -36,10 +39,7 @@ export const readMetrics = onCall<
 
     if (!deviceDoc.exists) {
       error(`Device ${deviceId} not found for user ${userId}`);
-      throw new HttpsError(
-        "permission-denied",
-        "You do not own this device",
-      );
+      throw new HttpsError("permission-denied", "You do not own this device");
     }
 
     // Calculate time range
@@ -51,6 +51,11 @@ export const readMetrics = onCall<
       "7d": 7 * 24 * 60 * 60 * 1000,
     };
     const startTime = now - timeRanges[timeRange];
+
+    if (isEmulator) {
+      info("Running in emulator; returning empty metrics dataset");
+      return { dataPoints: [] };
+    }
 
     // Query Cloud Monitoring
     const projectId = app.options.projectId;
@@ -66,11 +71,24 @@ export const readMetrics = onCall<
         endTime: { seconds: Math.floor(now / 1000) },
       },
     };
-
-    const [timeSeries] = await metricsClient.listTimeSeries(request);
+    let timeSeries;
+    try {
+      [timeSeries] = await metricsClient.listTimeSeries(request);
+    } catch (monitoringError) {
+      const message =
+        monitoringError instanceof Error
+          ? monitoringError.message
+          : "Unknown Cloud Monitoring error";
+      error(`Cloud Monitoring query failed for ${deviceId}: ${message}`);
+      throw new HttpsError("internal", `Failed to query metrics: ${message}`);
+    }
 
     // Transform data points
-    const dataPoints: Array<{ timestamp: number; plantId: string; value: number }> = [];
+    const dataPoints: Array<{
+      timestamp: number;
+      plantId: string;
+      value: number;
+    }> = [];
     for (const series of timeSeries) {
       const plantId = series.metric?.labels?.plant_id || "unknown";
       for (const point of series.points || []) {
@@ -100,9 +118,6 @@ export const readMetrics = onCall<
     }
 
     error(`Error reading metrics for device ${deviceId}`, err);
-    throw new HttpsError(
-      "internal",
-      "An error occurred while reading metrics",
-    );
+    throw new HttpsError("internal", "An error occurred while reading metrics");
   }
 });

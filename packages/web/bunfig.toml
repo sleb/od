@@ -1,3 +1,2 @@
 [serve.static]
-plugins = ["bun-plugin-tailwind"]
 env = "OVERDRIP_FIREBASE_*"

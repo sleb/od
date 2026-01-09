@@ -103,7 +103,7 @@ cd packages/functions && bun run serve        # Start Firebase emulators
 - Interactive flows use [packages/cli/src/ui.ts](packages/cli/src/ui.ts): `promptEmail()`, `promptPassword()`, `promptDeviceName()`, `confirmAction()`, plus `printBanner()/printSuccess()/printWarning()/printError()` and `printJSON()`.
 - Config access uses `LocalConfigManager` from `@overdrip/core` (load/save via Bun `file`/`write`).
 - Authentication and device registration use `@overdrip/core` helpers (`logInUser()`, `registerDevice()`), not raw SDK calls in CLI.
-**Bun I/O pattern (NOT Node.js `fs`):**
+  **Bun I/O pattern (NOT Node.js `fs`):**
 
 ```typescript
 import { file, write } from "bun";
@@ -164,6 +164,33 @@ await write(path, JSON.stringify(config, null, 2));
 - Update rules when adding new collections or changing access patterns
 - Test rules with Firebase emulator before deploying
 
+## Metrics & Monitoring
+
+**Cloud Monitoring Integration:**
+
+Device metrics (moisture readings) are stored in Google Cloud Monitoring and visualized in the web dashboard using a two-step pattern:
+
+1. **Server-side data query:** `readMetrics` Cloud Function in [packages/functions/src/read-metrics.ts](packages/functions/src/read-metrics.ts) queries Cloud Monitoring API with strict authorization
+   - Verifies user owns the device in Firestore before returning any data
+   - Accepts `timeRange` parameter ("1h"|"6h"|"24h"|"7d", default "24h")
+   - Returns array of data points: `{timestamp, plantId, value}`
+   - Handles emulator mode by returning empty dataset (Cloud Monitoring unavailable in dev)
+
+2. **Client-side rendering:** `DeviceStats` component in [packages/web/src/components/devices/device-stats.tsx](packages/web/src/components/devices/device-stats.tsx) renders data with Recharts
+   - Calls `readMetrics()` helper from `@overdrip/core/metrics`
+   - Groups data points by plant ID (separate chart lines per plant)
+   - Supports time range selector for interactive exploration
+   - Includes loading states, error handling, empty state messaging
+
+**Why server-side authorization?** Multi-tenant security requires verifying device ownership on every request. The `readMetrics` function checks `/users/{uid}/devices/{deviceId}` in Firestore before querying Cloud Monitoring—users cannot access other users' data.
+
+**Dependencies:**
+
+- `@google-cloud/monitoring` v5.3.1 (Cloud Functions)
+- `recharts` v3.6.0 (web dashboard)
+
+**Tests:** Validation tests in [packages/functions/src/read-metrics.test.ts](packages/functions/src/read-metrics.test.ts) cover request validation, authorization, and response structure.
+
 ## App Package (device runtime)
 
 **Status:** Initialization layer implemented; hardware auto-detection added; hardware control logic pending.
@@ -184,11 +211,9 @@ await write(path, JSON.stringify(config, null, 2));
 
 **Test coverage completed:**
 
-
 **Total: 96 tests passing** across core and functions packages.
 
 **Key patterns:**
-
 
 **Run tests:** `bun test` from workspace root or per-package.
 
@@ -197,11 +222,13 @@ await write(path, JSON.stringify(config, null, 2));
 **Location:** `packages/web/tests/` — Playwright e2e tests for web UI flows.
 
 **Test suite (6 focused tests):**
+
 - `auth.spec.ts` — 1 test: full auth cycle (signup → logout → login)
 - `protected-routes.spec.ts` — 2 tests: unauthenticated/authenticated route access
 - `devices.spec.ts` — 3 tests: page load, empty state, navigation
 
 **Running tests:**
+
 ```bash
 # Tests auto-start/stop emulators via firebase emulators:exec
 cd packages/web
@@ -212,6 +239,7 @@ bun run test:e2e:debug     # Debug mode
 ```
 
 **Key helpers (in `helpers.ts`):**
+
 - `signUp(page, email, password)` — Sign up new user
 - `logIn(page, email, password)` — Log in existing user
 - `logOut(page)` — Log out current user
@@ -220,12 +248,14 @@ bun run test:e2e:debug     # Debug mode
 - `TEST_DEVICES` — Expected test devices for seeding
 
 **Philosophy:**
+
 - Focus on user flows, not implementation details
 - One comprehensive test > many redundant tests
 - Skip gracefully when test data unavailable (devices tests)
 - Use helpers for cleaner, more maintainable tests
 
 **Test data seeding:**
+
 - Devices can only be registered via CLI (not web UI)
 - Device list tests skip if no devices seeded in Firestore emulator
 - Register test devices via: `cd packages/cli && bun run src/index.ts init`

@@ -19,7 +19,8 @@
     "@tabler/icons-react": "^3.36.1",
     "react": "^19",
     "react-dom": "^19",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@overdrip/eslint": "workspace:*",

@@ -20,6 +20,13 @@ export const build = async () => {
 
   console.log("\n🚀 Starting build process...\n");
 
+  if (process.env.NODE_ENV !== "production") {
+    console.error(
+      "❌ Build failed: NODE_ENV must be set to 'production' for production builds.",
+    );
+    process.exit(1);
+  }
+
   const outdir = "dist";
 
   if (existsSync(outdir)) {
@@ -32,7 +39,7 @@ export const build = async () => {
   const result = await Bun.build({
     entrypoints: ["src/index.html"],
     outdir,
-    plugins: [],
+    env: "inline",
     minify: true,
     target: "browser",
     sourcemap: "linked",
