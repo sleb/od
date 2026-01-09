@@ -95,3 +95,27 @@ export const WriteMetricsResponseSchema = z.object({
 });
 
 export type WriteMetricsResponse = z.infer<typeof WriteMetricsResponseSchema>;
+
+// Read metrics schemas
+export const ReadMetricsRequestSchema = z.object({
+  deviceId: DeviceId,
+  timeRange: z.enum(["1h", "6h", "24h", "7d"]).default("24h"),
+});
+
+export type ReadMetricsRequest = z.infer<typeof ReadMetricsRequestSchema>;
+
+export const MetricDataPointResponseSchema = z.object({
+  timestamp: z.number().int().positive(),
+  plantId: z.string(),
+  value: z.number(),
+});
+
+export type MetricDataPointResponse = z.infer<
+  typeof MetricDataPointResponseSchema
+>;
+
+export const ReadMetricsResponseSchema = z.object({
+  dataPoints: z.array(MetricDataPointResponseSchema),
+});
+
+export type ReadMetricsResponse = z.infer<typeof ReadMetricsResponseSchema>;
