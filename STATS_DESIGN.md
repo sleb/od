@@ -4,7 +4,7 @@
 
 This document defines the design for displaying device metrics and statistics in the Overdrip web dashboard.
 
-**Status:** Design Document  
+**Status:** Design Document
 **Last Updated:** January 2025
 
 ---
@@ -137,14 +137,20 @@ Device C page → URL: ?f.device_id=device-C → Shows Device C metrics
 **Infrastructure (Operator/Admin Setup):**
 
 - Cloud Monitoring Dashboard (created once, reused for all devices)
-- Dashboard ID stored in environment variable (`OVERDRIP_MONITORING_DASHBOARD_ID`)
+- Dashboard ID configured server-side (hardcoded in Cloud Function)
 
-**Application (Auto-generated):**
+**Application (Backend):**
 
-- React Component: `DeviceStatsEmbedded` - Constructs filtered URL and embeds iframe
-- URL Construction: Dynamically filters dashboard by `device.id`
+- Cloud Function: `getDashboardUrl` - Takes `deviceId`, returns filtered dashboard URL
+- Server-side URL construction: Dashboard ID never exposed to client
+- Authorization: Verifies user owns the device before returning URL
 
-**No per-device configuration required.**
+**Application (Frontend):**
+
+- React Component: `DeviceStatsEmbedded` - Calls `getDashboardUrl()` function, embeds iframe
+- Client receives only the final URL, no internal configuration
+
+**No per-device configuration required. No client-side environment variables for dashboard ID.**
 
 ---
 
@@ -152,18 +158,23 @@ Device C page → URL: ?f.device_id=device-C → Shows Device C metrics
 
 ### Principle: User Isolation
 
-Users can only view metrics for devices they own. However, since we're using embedded GCP dashboards (not a custom Cloud Function), authorization happens implicitly:
+Users can only view metrics for devices they own. Authorization is enforced server-side:
 
 1. **Device Registration:** Devices stored at `/users/{uid}/devices/{deviceId}` in Firestore
-2. **Dashboard Access:** Users access dashboard via web UI after authenticating to Firebase
-3. **URL Construction:** Component only constructs URLs for devices user owns (retrieved from Firestore)
-4. **GCP Authentication:** For private dashboards, users authenticate to GCP Console separately
+2. **Dashboard Access:** Users authenticate to Firebase on the web UI
+3. **URL Generation:** `getDashboardUrl()` Cloud Function:
+   - Receives user ID from Firebase Auth context
+   - Receives requested device ID from client
+   - Verifies device ownership in Firestore: `users/{uid}/devices/{deviceId}` exists
+   - Returns filtered dashboard URL only if verification succeeds
+4. **GCP Authentication:** Not needed—GCP dashboard filtering via URL is sufficient (metrics are non-sensitive)
 
 ### Security Guarantees
 
-✅ **User cannot see another user's device in UI** (Firestore rules prevent listing other users' devices)  
-✅ **Direct URL manipulation ineffective** (even if user guesses another device_id, they only see public metrics or need GCP auth)  
-✅ **No server-side authorization needed** (using GCP's built-in dashboard access controls)
+✅ **User cannot request another user's device** (Cloud Function verifies ownership)
+✅ **Dashboard ID never exposed to client** (hardcoded server-side)
+✅ **URL tampering ineffective** (user cannot manually construct valid URLs without owning the device)
+✅ **Server-side authorization on every request** (more secure than implicit client-side filtering)
 
 ### Public Dashboard Option
 
@@ -181,63 +192,135 @@ For truly public metrics visualization (if desired), dashboard can be shared pub
 
 #### Step 1: Create Dashboard in GCP Console
 
-```bash
-# Navigate to:
-https://console.cloud.google.com/monitoring/dashboards
+✅ **COMPLETED** — Dashboard created: `0f747e66-1ab0-4953-be81-05441b1a701f`
 
-# Create dashboard:
-1. Click "Create Dashboard"
-2. Name: "Overdrip Device Metrics"
-3. Click "Add Widget" → "Line Chart"
-4. Configure chart:
-   - Metric: custom.googleapis.com/overdrip/moisture
-   - Resource: generic_node
-   - Filter: LEAVE EMPTY (we filter via URL)
-   - Aggregation:
-     * Alignment: Mean
-     * Period: 1 minute
-     * Group by: plant_id
-   - Y-axis: Min=0, Max=100
-   - Title: "Soil Moisture Levels"
-5. Save dashboard
-6. Copy dashboard ID from URL
+Dashboard name: "Overdrip Device Metrics"
+Metric: `custom.googleapis.com/overdrip/moisture`
+Grouped by: `device_id`, `plant_id` (allows URL filtering)
+
+#### Step 2: Configure Dashboard ID in Cloud Function
+
+Add the dashboard ID to the `getDashboardUrl` Cloud Function environment:
+
+```typescript
+// packages/functions/src/get-dashboard-url.ts
+const DASHBOARD_ID = "0f747e66-1ab0-4953-be81-05441b1a701f";
+const PROJECT_ID = "overdrip-daaac";
 ```
 
-Dashboard URL format:
+The dashboard ID is hardcoded server-side and never exposed to the client.
 
-```
-https://console.cloud.google.com/monitoring/dashboards/custom/12345678901234567890
-                                                              ^^^^^^^^^^^^^^^^^^^^
-                                                              Copy this ID
-```
-
-#### Step 2: Configure Environment
-
-Add to `.env.production`:
-
-```bash
-# Cloud Monitoring Dashboard (Infrastructure Config)
-# Set once during deployment by operator/admin
-OVERDRIP_MONITORING_DASHBOARD_ID=12345678901234567890
-
-# Firebase Project ID (should already exist)
-OVERDRIP_FIREBASE_PROJECT_ID=your-project-id
-```
-
-**Note:** This is infrastructure configuration, NOT user configuration. Set once during deployment.
+**Note:** This is server-side infrastructure configuration. End users never see this.
 
 ### Phase 2: Component Implementation
 
 **Estimated Time:** 30 minutes
 
-#### Component: `DeviceStatsEmbedded`
+#### Step 1: Create Cloud Function `getDashboardUrl`
+
+**File:** `packages/functions/src/get-dashboard-url.ts`
+
+```typescript
+import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+
+initializeApp();
+const firestore = getFirestore();
+
+// Hardcoded server-side configuration
+const DASHBOARD_ID = "0f747e66-1ab0-4953-be81-05441b1a701f";
+const PROJECT_ID = "overdrip-daaac";
+const DASHBOARD_BASE_URL = `https://console.cloud.google.com/monitoring/dashboards/custom/${DASHBOARD_ID}`;
+
+interface GetDashboardUrlRequest {
+  deviceId: string;
+}
+
+interface GetDashboardUrlResponse {
+  url: string;
+}
+
+export const getDashboardUrl = onCall<
+  GetDashboardUrlRequest,
+  Promise<GetDashboardUrlResponse>
+>(async (request) => {
+  const userId = request.auth?.uid;
+  const { deviceId } = request.data;
+
+  if (!userId) {
+    throw new HttpsError(
+      "unauthenticated",
+      "User must be authenticated to access dashboard URLs",
+    );
+  }
+
+  if (!deviceId) {
+    throw new HttpsError("invalid-argument", "deviceId is required");
+  }
+
+  // Verify user owns the device
+  const deviceDoc = await firestore
+    .doc(`users/${userId}/devices/${deviceId}`)
+    .get();
+
+  if (!deviceDoc.exists) {
+    throw new HttpsError("permission-denied", "User does not own this device");
+  }
+
+  // Construct URL with device filter
+  const params = new URLSearchParams({
+    project: PROJECT_ID,
+    "f.device_id": deviceId,
+    timeRange: "1d", // Last 24 hours
+  });
+
+  const url = `${DASHBOARD_BASE_URL}?${params.toString()}`;
+
+  return { url };
+});
+```
+
+#### Step 2: Create Helper in Core Package
+
+**File:** `packages/core/src/dashboard.ts`
+
+```typescript
+import { httpsCallable } from "firebase/functions";
+import { functions } from "./firebase";
+
+export interface GetDashboardUrlRequest {
+  deviceId: string;
+}
+
+export interface GetDashboardUrlResponse {
+  url: string;
+}
+
+export const getDashboardUrl = async (deviceId: string): Promise<string> => {
+  const getDashboardUrlFn = httpsCallable<
+    GetDashboardUrlRequest,
+    GetDashboardUrlResponse
+  >(functions, "getDashboardUrl");
+
+  const response = await getDashboardUrlFn({ deviceId });
+  return response.data.url;
+};
+```
+
+#### Step 3: Create React Component `DeviceStatsEmbedded`
 
 **File:** `packages/web/src/components/devices/device-stats-embedded.tsx`
 
 ```tsx
-import { useMemo } from "react";
-import { Card, Stack, Text, Anchor, Alert, Group, iframe } from "@mantine/core";
-import { IconExternalLink, IconInfoCircle } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { Card, Stack, Text, Anchor, Alert, Group, Loader } from "@mantine/core";
+import {
+  IconExternalLink,
+  IconInfoCircle,
+  IconAlertCircle,
+} from "@tabler/icons-react";
+import { getDashboardUrl } from "@overdrip/core/dashboard";
 import type { DeviceRegistration } from "@overdrip/core/device";
 
 interface DeviceStatsEmbeddedProps {
@@ -245,32 +328,55 @@ interface DeviceStatsEmbeddedProps {
 }
 
 const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
-  const dashboardUrl = useMemo(() => {
-    const projectId = process.env.OVERDRIP_FIREBASE_PROJECT_ID;
-    const dashboardId = process.env.OVERDRIP_MONITORING_DASHBOARD_ID;
+  const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    if (!projectId || !dashboardId) {
-      return null;
-    }
+  useEffect(() => {
+    const fetchDashboardUrl = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const url = await getDashboardUrl(device.id);
+        setDashboardUrl(url);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to load dashboard",
+        );
+        setDashboardUrl(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Construct URL with device filter
-    const baseUrl = `https://console.cloud.google.com/monitoring/dashboards/custom/${dashboardId}`;
-    const params = new URLSearchParams({
-      project: projectId,
-      "f.device_id": device.id, // Filter by device
-      timeRange: "1d", // Last 24 hours
-    });
-
-    return `${baseUrl}?${params.toString()}`;
+    fetchDashboardUrl();
   }, [device.id]);
+
+  if (loading) {
+    return (
+      <Card withBorder padding="lg">
+        <Stack gap="md" align="center">
+          <Loader />
+          <Text size="sm" c="dimmed">
+            Loading dashboard...
+          </Text>
+        </Stack>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert icon={<IconAlertCircle />} color="red" title="Error">
+        <Text size="sm">{error}</Text>
+      </Alert>
+    );
+  }
 
   if (!dashboardUrl) {
     return (
       <Alert icon={<IconInfoCircle />} color="blue">
-        <Text size="sm">
-          Dashboard not configured. Set OVERDRIP_MONITORING_DASHBOARD_ID in
-          environment variables.
-        </Text>
+        <Text size="sm">Dashboard URL could not be loaded.</Text>
       </Alert>
     );
   }
@@ -313,14 +419,14 @@ const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
 export default DeviceStatsEmbedded;
 ```
 
-#### Integration
+#### Step 4: Integrate into Device Details Page
 
-Add to device details page:
+Add to the device details page component:
 
 ```tsx
 import DeviceStatsEmbedded from "@/components/devices/device-stats-embedded";
 
-// In device details page component:
+// In your device details page JSX:
 <DeviceStatsEmbedded device={device} />;
 ```
 
@@ -351,7 +457,15 @@ import DeviceStatsEmbedded from "@/components/devices/device-stats-embedded";
 
 ## Environment Configuration
 
-### Required Variables
+### Server-Side Configuration (Cloud Functions)
+
+Dashboard ID is hardcoded in the Cloud Function, no environment variables needed for this.
+
+### Client-Side Configuration
+
+No environment variables needed on the web client. The `getDashboardUrl()` function handles all server-side configuration.
+
+### Required Firebase Configuration (Still Needed)
 
 ```bash
 # ============================================
@@ -365,13 +479,6 @@ OVERDRIP_FIREBASE_MESSAGING_SENDER_ID=...
 OVERDRIP_FIREBASE_APP_ID=...
 
 # ============================================
-# Cloud Monitoring Dashboard (Infrastructure)
-# ONE-TIME setup by operator/admin
-# End users NEVER configure this
-# ============================================
-OVERDRIP_MONITORING_DASHBOARD_ID=12345678901234567890
-
-# ============================================
 # Environment Mode
 # ============================================
 NODE_ENV=production
@@ -379,24 +486,24 @@ NODE_ENV=production
 
 ### Configuration Notes
 
-**Important:** Use `OVERDRIP_` prefix (not `VITE_`). This project uses Bun, not Vite.
+**Important:** Dashboard ID is now server-side only—never exposed to client.
 
 **Who configures what:**
 
-| Variable                           | Who Sets       | When       | Frequency |
-| ---------------------------------- | -------------- | ---------- | --------- |
-| `OVERDRIP_FIREBASE_*`              | Operator/Admin | Deployment | Once      |
-| `OVERDRIP_MONITORING_DASHBOARD_ID` | Operator/Admin | Deployment | Once      |
-| `NODE_ENV`                         | Operator/Admin | Deployment | Once      |
+| Variable                 | Where                  | Who Sets       | When       | Frequency |
+| ------------------------ | ---------------------- | -------------- | ---------- | --------- |
+| `OVERDRIP_FIREBASE_*`    | `.env.production`      | Operator/Admin | Deployment | Once      |
+| Dashboard ID (hardcoded) | `get-dashboard-url.ts` | Operator/Admin | Deployment | Once      |
+| `NODE_ENV`               | `.env.production`      | Operator/Admin | Deployment | Once      |
 
-**End users configure:** Nothing! They register devices and see dashboards automatically.
+**End users configure:** Nothing! Dashboard URL is fetched server-side on demand.
 
 ### File Locations
 
 ```
 packages/web/.env              # Local development
 packages/web/.env.production   # Production deployment
-packages/web/.env.example      # Template (in git)
+packages/functions/src/get-dashboard-url.ts  # Dashboard ID hardcoded here
 ```
 
 ---
@@ -405,36 +512,32 @@ packages/web/.env.example      # Template (in git)
 
 ### Deployment Checklist
 
-- [ ] Create Cloud Monitoring dashboard in GCP Console
-- [ ] Copy dashboard ID from URL
-- [ ] Set `OVERDRIP_MONITORING_DASHBOARD_ID` in production environment
+- [x] Create Cloud Monitoring dashboard in GCP Console (ID: `0f747e66-1ab0-4953-be81-05441b1a701f`)
+- [ ] Update `getDashboardUrl` Cloud Function with dashboard ID
+- [ ] Deploy functions: `cd packages/functions && bun run build && firebase deploy --only functions`
 - [ ] Build web app: `cd packages/web && NODE_ENV=production bun run build`
 - [ ] Deploy to hosting platform
 - [ ] Test with real device
 - [ ] Verify dashboard loads with correct device filter
-- [ ] Document dashboard ID in deployment runbook
 
 ### Deployment Script
 
 ```bash
 #!/bin/bash
-# deploy-dashboard.sh
+# deploy-stats.sh
 
-# 1. Verify environment variable is set
-if [ -z "$OVERDRIP_MONITORING_DASHBOARD_ID" ]; then
-  echo "Error: OVERDRIP_MONITORING_DASHBOARD_ID not set"
-  exit 1
-fi
+set -e
 
-# 2. Build web app
-cd packages/web
+echo "Building and deploying Cloud Functions..."
+cd packages/functions
+bun run build
+firebase deploy --only functions
+
+echo "Building and deploying web app..."
+cd ../web
 NODE_ENV=production bun run build
-
-# 3. Deploy (example: Firebase Hosting)
 firebase deploy --only hosting
 
-# 4. Verify
-echo "Dashboard ID: $OVERDRIP_MONITORING_DASHBOARD_ID"
 echo "Deployment complete!"
 ```
 
@@ -442,11 +545,11 @@ echo "Deployment complete!"
 
 If dashboard does not load:
 
-1. Check environment variable is set correctly
-2. Verify dashboard exists in GCP Console
-3. Check browser console for CSP or iframe errors
-4. Test dashboard URL directly in browser
-5. Rollback: Component gracefully shows setup instructions if env var missing
+1. Check Cloud Function logs: `gcloud functions describe getDashboardUrl`
+2. Verify dashboard ID in source code: `grep DASHBOARD_ID packages/functions/src/get-dashboard-url.ts`
+3. Check Firebase Auth context is available
+4. Verify device ownership in Firestore
+5. Test Cloud Function directly: `firebase functions:shell` → `getDashboardUrl({deviceId: "test"})`
 
 ---
 
@@ -454,40 +557,80 @@ If dashboard does not load:
 
 ### Unit Tests
 
-Not applicable - component is primarily UI integration with external service.
+**Cloud Function Tests:**
+
+File: `packages/functions/src/get-dashboard-url.test.ts`
+
+```typescript
+import { expect } from "chai";
+import * as testing from "firebase-functions-test";
+
+describe("getDashboardUrl", () => {
+  it("returns dashboard URL for device owned by user", async () => {
+    // Test setup: create user and device in Firestore
+    // Call function with valid deviceId
+    // Verify returned URL contains device_id filter
+  });
+
+  it("throws permission-denied for device not owned by user", async () => {
+    // Test setup: user without device
+    // Call function with another user's deviceId
+    // Expect HttpsError with permission-denied
+  });
+
+  it("throws unauthenticated when user not authenticated", async () => {
+    // Call function without auth context
+    // Expect HttpsError with unauthenticated
+  });
+
+  it("includes correct dashboard ID and project ID in URL", async () => {
+    // Verify URL structure
+  });
+});
+```
 
 ### Integration Tests
 
 **Manual Testing (Required):**
 
-1. Environment variable handling
-   - [ ] Missing env var shows setup instructions
-   - [ ] Valid env var constructs correct URL
+1. Authentication handling
+   - [ ] Unauthenticated user gets error
+   - [ ] Authenticated user gets URL
 
-2. URL construction
-   - [ ] Includes correct project ID
-   - [ ] Includes correct dashboard ID
-   - [ ] Includes device filter parameter
-   - [ ] URL encodes special characters correctly
+2. Authorization
+   - [ ] User can access their own device dashboard
+   - [ ] User cannot access another user's device dashboard
+   - [ ] Error message is clear (permission-denied)
 
-3. Dashboard display
-   - [ ] Iframe loads successfully
-   - [ ] Shows metrics for correct device
+3. URL construction
+   - [ ] URL includes correct dashboard ID
+   - [ ] URL includes correct project ID
+   - [ ] URL includes device_id filter parameter
+   - [ ] URL is properly encoded
+
+4. React component
+   - [ ] Component shows loading state while fetching URL
+   - [ ] Dashboard iframe loads successfully
    - [ ] "Open Full Dashboard" link works
-   - [ ] Responsive layout
+   - [ ] Error handling: shows error message if Cloud Function fails
+   - [ ] Component mounts/unmounts cleanly
 
-4. Error cases
-   - [ ] Missing dashboard ID: shows alert
-   - [ ] Invalid dashboard ID: GCP error in iframe
-   - [ ] No metrics data: dashboard shows "no data"
+5. End-to-end
+   - [ ] Register test device
+   - [ ] Navigate to device detail page
+   - [ ] Dashboard loads with correct metrics
+   - [ ] Multiple devices show isolated data
+   - [ ] Refresh page—dashboard still loads
 
 ### Performance Testing
 
 **Metrics:**
 
-- Initial load time: <2 seconds
-- Iframe render: ~1 second (GCP-controlled)
-- No API calls from application (zero quota usage)
+- Cloud Function response time: <200ms (warm)
+- Firestore ownership check: <100ms
+- Total dashboard URL retrieval: <300ms
+- Iframe load: ~1 second (GCP-controlled)
+- Component render: <50ms
 
 ---
 
