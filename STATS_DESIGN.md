@@ -76,24 +76,34 @@ Users need to view real-time moisture sensor data and device metrics for their r
 
 ## Design Decision
 
-### Selected Approach: Embedded Cloud Monitoring Dashboard
+### Selected Approach: Custom Charts with Server-Side Data Query
 
-**Rationale:** Embed a single GCP Cloud Monitoring dashboard via iframe, filtered by device_id via URL parameters.
+**Rationale:** Query Cloud Monitoring API from server-side Cloud Function, return data points, and render charts client-side using Recharts.
 
 #### Why This Approach?
 
-1. **Simplicity:** Create dashboard once, reuse for all devices
-2. **Zero API costs:** No Cloud Function queries, no quota usage
-3. **GCP-managed:** Security, performance, and features handled by Google
-4. **Scalability:** One dashboard serves unlimited devices via URL filtering
-5. **Low maintenance:** Edit dashboard in GCP Console, changes propagate to all devices
-6. **Good UX:** Stays in-app via iframe, seamless user experience
+1. **Security:** True server-side authorization on every request—users cannot access other users' data
+2. **User Isolation:** Cloud Function enforces device ownership before returning any metrics
+3. **Customization:** Full control over chart styling, branding, and UX
+4. **No GCP Console Access:** Users never interact with GCP Console, stays fully in-app
+5. **Standard Pattern:** This is how Firebase/web apps typically handle user-specific metrics
+6. **Maintainable:** ~200-300 lines of well-structured code following existing patterns
 
 #### Trade-offs Accepted
 
-- **GCP branding visible:** Google Cloud UI styling
-- **Limited customization:** Cannot significantly change chart appearance
-- **Authentication:** Users may need GCP Console authentication (mitigated via public dashboards)
+- **More code:** ~300 lines vs. ~100 lines for embedded dashboard
+- **API costs:** ~$0.26 per 1M queries (negligible at expected scale)
+- **Maintenance:** Small ongoing maintenance for chart library and Cloud Function
+- **Feature development:** Must build features ourselves vs. using GCP Console features
+
+#### Why Not Embedded Dashboard?
+
+Embedded GCP dashboards require either:
+
+- **Public access:** Anyone with URL can view any device's metrics (security issue)
+- **GCP authentication:** Users must sign into GCP Console (poor UX)
+
+Neither option provides proper user isolation for a multi-tenant application.
 
 See [Appendix A](#appendix-a-alternative-approaches-considered) for detailed analysis of alternatives.
 
@@ -110,247 +120,345 @@ See [Appendix A](#appendix-a-alternative-approaches-considered) for detailed ana
 └─────────────┘         └──────────────┘         └─────────────────────┘
    Custom Token           Service Account              Project-wide
                                                            │
-                                                           │
-                                                           │
-┌─────────────┐         ┌──────────────┐                 │
-│ Web User    │────────▶│ React Comp   │─────────────────┘
-│ (Browser)   │ View    │  (iframe)    │ Embed URL
-└─────────────┘         └──────────────┘
-   Email/Password          URL Filtering
-                           ?f.device_id=...
+                                                           │ Query
+┌─────────────┐         ┌──────────────┐         ┌───────▼─────────────┐
+│ Web User    │────────▶│ React Comp   │────────▶│ Cloud Func          │
+│ (Browser)   │ View    │  (Recharts)  │ Request │ readMetrics         │
+└─────────────┘         └──────────────┘         └─────────────────────┘
+   Email/Password       Renders Chart             Verifies Ownership
+                        with Data                 Returns Data Points
 ```
 
-### Dashboard Filtering Strategy
+### Data Query Strategy
 
-**Key Insight:** One dashboard template + URL parameters = per-device views
+**Key Insight:** Server-side authorization + client-side rendering = secure, customizable charts
 
 ```
-Single Dashboard (created once by admin)
-         ↓
-Device A page → URL: ?f.device_id=device-A → Shows Device A metrics
-Device B page → URL: ?f.device_id=device-B → Shows Device B metrics
-Device C page → URL: ?f.device_id=device-C → Shows Device C metrics
+Device A page → readMetrics(device-A) → Verify ownership → Return A's data → Render chart
+Device B page → readMetrics(device-B) → Verify ownership → Return B's data → Render chart
+Device C page → readMetrics(device-C) → Verify ownership → Return C's data → Render chart
 ```
+
+**Security:** Each request is authorized independently—no way to access another user's data.
 
 ### Components
 
-**Infrastructure (Operator/Admin Setup):**
+**Infrastructure:**
 
-- Cloud Monitoring Dashboard (created once, reused for all devices)
-- Dashboard ID configured server-side (hardcoded in Cloud Function)
+- Cloud Monitoring (stores metrics from devices)
+- Service account credentials (for Cloud Functions to query Monitoring API)
 
 **Application (Backend):**
 
-- Cloud Function: `getDashboardUrl` - Takes `deviceId`, returns filtered dashboard URL
-- Server-side URL construction: Dashboard ID never exposed to client
-- Authorization: Verifies user owns the device before returning URL
+- Cloud Function: `readMetrics` - Queries Cloud Monitoring API
+  - Input: `deviceId`, `timeRange` (e.g., "1d", "7d")
+  - Authorization: Verifies user owns device via Firestore
+  - Output: Array of data points `[{timestamp, plantId, value}]`
+- Core helper: `readMetrics(deviceId, timeRange)` - Calls Cloud Function from client
 
 **Application (Frontend):**
 
-- React Component: `DeviceStatsEmbedded` - Calls `getDashboardUrl()` function, embeds iframe
-- Client receives only the final URL, no internal configuration
+- React Component: `DeviceStats` - Displays charts using Recharts
+  - Fetches data via `readMetrics()` helper
+  - Renders line chart showing moisture levels over time
+  - Supports time range selection (1h, 6h, 24h, 7d)
+  - Loading/error states
+- Dependency: Recharts (~50KB, React charting library)
 
-**No per-device configuration required. No client-side environment variables for dashboard ID.**
+**No infrastructure configuration required. All logic in code.**
 
 ---
 
 ## Security Model
 
-### Principle: User Isolation
+### Principle: Server-Side Authorization on Every Request
 
-Users can only view metrics for devices they own. Authorization is enforced server-side:
+Users can **only** view metrics for devices they own. Authorization is enforced server-side on every data request:
 
 1. **Device Registration:** Devices stored at `/users/{uid}/devices/{deviceId}` in Firestore
-2. **Dashboard Access:** Users authenticate to Firebase on the web UI
-3. **URL Generation:** `getDashboardUrl()` Cloud Function:
-   - Receives user ID from Firebase Auth context
-   - Receives requested device ID from client
-   - Verifies device ownership in Firestore: `users/{uid}/devices/{deviceId}` exists
-   - Returns filtered dashboard URL only if verification succeeds
-4. **GCP Authentication:** Not needed—GCP dashboard filtering via URL is sufficient (metrics are non-sensitive)
+2. **Client Authentication:** Users authenticate to Firebase on the web UI
+3. **Data Query:** `readMetrics()` Cloud Function:
+   - Receives user ID from Firebase Auth context (`req.auth.uid`)
+   - Receives requested `deviceId` and `timeRange` from client
+   - **Verifies ownership:** Checks `users/{uid}/devices/{deviceId}` exists in Firestore
+   - **Queries metrics:** Only if verification succeeds, queries Cloud Monitoring API
+   - **Returns data:** Only data points for the authorized device
+4. **Client Rendering:** React component receives data and renders chart
 
 ### Security Guarantees
 
-✅ **User cannot request another user's device** (Cloud Function verifies ownership)
-✅ **Dashboard ID never exposed to client** (hardcoded server-side)
-✅ **URL tampering ineffective** (user cannot manually construct valid URLs without owning the device)
-✅ **Server-side authorization on every request** (more secure than implicit client-side filtering)
+✅ **True data isolation:** Users cannot access other users' data under any circumstances
+✅ **Server-side enforcement:** Authorization happens in Cloud Function, not client
+✅ **No URL tampering:** Data is fetched via authenticated function call, not URL parameters
+✅ **Audit trail:** All requests logged with user ID and device ID
+✅ **Firestore rules respected:** Leverages existing device ownership model
 
-### Public Dashboard Option
+### Attack Scenarios
 
-For truly public metrics visualization (if desired), dashboard can be shared publicly via GCP Console settings. Trade-off: anyone with URL can view metrics.
+**Scenario 1: User requests another user's device**
 
-**Recommendation:** Keep dashboards private, require GCP authentication for embedded view.
+```
+User A calls readMetrics({deviceId: "device-B"})
+→ Cloud Function checks: users/userA/devices/device-B exists?
+→ Does not exist
+→ Throws HttpsError("permission-denied")
+→ No data returned
+```
 
----
+**Scenario 2: User modifies client code to bypass checks**
+
+```
+User modifies React component to skip authorization
+→ Still calls readMetrics() Cloud Function
+→ Cloud Function enforces authorization server-side
+→ No data returned
+```
+
+**Result:** Full security isolation. This is the standard pattern for multi-tenant Firebase applications.
 
 ## Implementation Plan
 
-### Phase 1: Infrastructure Setup (Operator/Admin - One Time)
+### Phase 1: Backend - Cloud Function & Schemas
 
-**Estimated Time:** 10 minutes
+**Estimated Time:** 45 minutes
 
-#### Step 1: Create Dashboard in GCP Console
+#### Step 1: Add Schemas to Core Package
 
-✅ **COMPLETED** — Dashboard created: `0f747e66-1ab0-4953-be81-05441b1a701f`
+**File:** `packages/core/src/schemas.ts`
 
-Dashboard name: "Overdrip Device Metrics"
-Metric: `custom.googleapis.com/overdrip/moisture`
-Grouped by: `device_id`, `plant_id` (allows URL filtering)
-
-#### Step 2: Configure Dashboard ID in Cloud Function
-
-Add the dashboard ID to the `getDashboardUrl` Cloud Function environment:
+Add request/response schemas for readMetrics:
 
 ```typescript
-// packages/functions/src/get-dashboard-url.ts
-const DASHBOARD_ID = "0f747e66-1ab0-4953-be81-05441b1a701f";
-const PROJECT_ID = "overdrip-daaac";
+export const ReadMetricsRequestSchema = z.object({
+  deviceId: DeviceId,
+  timeRange: z.enum(["1h", "6h", "24h", "7d"]).default("24h"),
+});
+
+export type ReadMetricsRequest = z.infer<typeof ReadMetricsRequestSchema>;
+
+export const MetricDataPointResponseSchema = z.object({
+  timestamp: z.number().int().positive(),
+  plantId: z.string(),
+  value: z.number(),
+});
+
+export type MetricDataPointResponse = z.infer<
+  typeof MetricDataPointResponseSchema
+>;
+
+export const ReadMetricsResponseSchema = z.object({
+  dataPoints: z.array(MetricDataPointResponseSchema),
+});
+
+export type ReadMetricsResponse = z.infer<typeof ReadMetricsResponseSchema>;
 ```
 
-The dashboard ID is hardcoded server-side and never exposed to the client.
+#### Step 2: Create Cloud Function `readMetrics`
 
-**Note:** This is server-side infrastructure configuration. End users never see this.
-
-### Phase 2: Component Implementation
-
-**Estimated Time:** 30 minutes
-
-#### Step 1: Create Cloud Function `getDashboardUrl`
-
-**File:** `packages/functions/src/get-dashboard-url.ts`
+**File:** `packages/functions/src/read-metrics.ts`
 
 ```typescript
-import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import {
+  ReadMetricsRequestSchema,
+  type ReadMetricsRequest,
+  type ReadMetricsResponse,
+} from "@overdrip/core/schemas";
+import { HttpsError, onCall } from "firebase-functions/https";
+import { error, info } from "firebase-functions/logger";
+import { app } from "./firebase";
+import { MetricServiceClient } from "@google-cloud/monitoring";
 
-initializeApp();
-const firestore = getFirestore();
+const metricsClient = new MetricServiceClient();
 
-// Hardcoded server-side configuration
-const DASHBOARD_ID = "0f747e66-1ab0-4953-be81-05441b1a701f";
-const PROJECT_ID = "overdrip-daaac";
-const DASHBOARD_BASE_URL = `https://console.cloud.google.com/monitoring/dashboards/custom/${DASHBOARD_ID}`;
-
-interface GetDashboardUrlRequest {
-  deviceId: string;
-}
-
-interface GetDashboardUrlResponse {
-  url: string;
-}
-
-export const getDashboardUrl = onCall<
-  GetDashboardUrlRequest,
-  Promise<GetDashboardUrlResponse>
->(async (request) => {
-  const userId = request.auth?.uid;
-  const { deviceId } = request.data;
+export const readMetrics = onCall<
+  ReadMetricsRequest,
+  Promise<ReadMetricsResponse>
+>({ cors: true }, async (req) => {
+  const userId = req.auth?.uid;
 
   if (!userId) {
     throw new HttpsError(
       "unauthenticated",
-      "User must be authenticated to access dashboard URLs",
+      "The function must be called while authenticated.",
     );
   }
 
-  if (!deviceId) {
-    throw new HttpsError("invalid-argument", "deviceId is required");
+  const { deviceId, timeRange } = ReadMetricsRequestSchema.parse(req.data);
+
+  info(`Reading metrics for device ${deviceId}, range: ${timeRange}`);
+
+  try {
+    // Verify user owns the device
+    const deviceDoc = await app
+      .firestore()
+      .doc(`users/${userId}/devices/${deviceId}`)
+      .get();
+
+    if (!deviceDoc.exists) {
+      error(`Device ${deviceId} not found for user ${userId}`);
+      throw new HttpsError("permission-denied", "You do not own this device");
+    }
+
+    // Calculate time range
+    const now = Date.now();
+    const timeRanges = {
+      "1h": 60 * 60 * 1000,
+      "6h": 6 * 60 * 60 * 1000,
+      "24h": 24 * 60 * 60 * 1000,
+      "7d": 7 * 24 * 60 * 60 * 1000,
+    };
+    const startTime = now - timeRanges[timeRange];
+
+    // Query Cloud Monitoring
+    const projectId = await app.firestore().app.options.projectId;
+    const request = {
+      name: `projects/${projectId}`,
+      filter: `metric.type="custom.googleapis.com/overdrip/moisture" AND metric.label.device_id="${deviceId}"`,
+      interval: {
+        startTime: { seconds: Math.floor(startTime / 1000) },
+        endTime: { seconds: Math.floor(now / 1000) },
+      },
+    };
+
+    const [timeSeries] = await metricsClient.listTimeSeries(request);
+
+    // Transform data points
+    const dataPoints = [];
+    for (const series of timeSeries) {
+      const plantId = series.metric?.labels?.plant_id || "unknown";
+      for (const point of series.points || []) {
+        if (point.interval?.endTime && point.value?.doubleValue !== undefined) {
+          dataPoints.push({
+            timestamp: point.interval.endTime.seconds * 1000,
+            plantId,
+            value: point.value.doubleValue,
+          });
+        }
+      }
+    }
+
+    info(`Retrieved ${dataPoints.length} data points for device ${deviceId}`);
+
+    return { dataPoints };
+  } catch (err) {
+    if (err instanceof HttpsError) {
+      throw err;
+    }
+
+    error(`Error reading metrics for device ${deviceId}`, err);
+    throw new HttpsError("internal", "An error occurred while reading metrics");
   }
-
-  // Verify user owns the device
-  const deviceDoc = await firestore
-    .doc(`users/${userId}/devices/${deviceId}`)
-    .get();
-
-  if (!deviceDoc.exists) {
-    throw new HttpsError("permission-denied", "User does not own this device");
-  }
-
-  // Construct URL with device filter
-  const params = new URLSearchParams({
-    project: PROJECT_ID,
-    "f.device_id": deviceId,
-    timeRange: "1d", // Last 24 hours
-  });
-
-  const url = `${DASHBOARD_BASE_URL}?${params.toString()}`;
-
-  return { url };
 });
 ```
 
-#### Step 2: Create Helper in Core Package
+#### Step 3: Create Helper in Core Package
 
-**File:** `packages/core/src/dashboard.ts`
+**File:** `packages/core/src/metrics.ts` (add to existing file)
 
 ```typescript
 import { httpsCallable } from "firebase/functions";
 import { functions } from "./firebase";
+import type {
+  ReadMetricsRequest,
+  ReadMetricsResponse,
+  MetricDataPointResponse,
+} from "./schemas";
 
-export interface GetDashboardUrlRequest {
-  deviceId: string;
-}
+export const readMetrics = async (
+  deviceId: string,
+  timeRange: "1h" | "6h" | "24h" | "7d" = "24h",
+): Promise<MetricDataPointResponse[]> => {
+  const readMetricsFn = httpsCallable<ReadMetricsRequest, ReadMetricsResponse>(
+    functions,
+    "readMetrics",
+  );
 
-export interface GetDashboardUrlResponse {
-  url: string;
-}
-
-export const getDashboardUrl = async (deviceId: string): Promise<string> => {
-  const getDashboardUrlFn = httpsCallable<
-    GetDashboardUrlRequest,
-    GetDashboardUrlResponse
-  >(functions, "getDashboardUrl");
-
-  const response = await getDashboardUrlFn({ deviceId });
-  return response.data.url;
+  const response = await readMetricsFn({ deviceId, timeRange });
+  return response.data.dataPoints;
 };
 ```
 
-#### Step 3: Create React Component `DeviceStatsEmbedded`
+#### Step 4: Export Function
 
-**File:** `packages/web/src/components/devices/device-stats-embedded.tsx`
+**File:** `packages/functions/src/index.ts`
+
+```typescript
+export * from "./create-custom-token";
+export * from "./register-device";
+export * from "./write-metrics";
+export * from "./read-metrics";
+```
+
+### Phase 2: Frontend - React Component with Recharts
+
+**Estimated Time:** 1 hour
+
+#### Step 1: Install Recharts
+
+```bash
+cd packages/web
+bun add recharts
+```
+
+#### Step 2: Create DeviceStats Component
+
+**File:** `packages/web/src/components/devices/device-stats.tsx`
 
 ```tsx
 import { useEffect, useState } from "react";
-import { Card, Stack, Text, Anchor, Alert, Group, Loader } from "@mantine/core";
 import {
-  IconExternalLink,
-  IconInfoCircle,
-  IconAlertCircle,
-} from "@tabler/icons-react";
-import { getDashboardUrl } from "@overdrip/core/dashboard";
+  Card,
+  Stack,
+  Text,
+  Alert,
+  Group,
+  Loader,
+  SegmentedControl,
+} from "@mantine/core";
+import { IconAlertCircle } from "@tabler/icons-react";
+import { readMetrics } from "@overdrip/core/metrics";
 import type { DeviceRegistration } from "@overdrip/core/device";
+import type { MetricDataPointResponse } from "@overdrip/core/schemas";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
-interface DeviceStatsEmbeddedProps {
+interface DeviceStatsProps {
   device: DeviceRegistration;
 }
 
-const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
-  const [dashboardUrl, setDashboardUrl] = useState<string | null>(null);
+type TimeRange = "1h" | "6h" | "24h" | "7d";
+
+const DeviceStats = ({ device }: DeviceStatsProps) => {
+  const [dataPoints, setDataPoints] = useState<MetricDataPointResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<TimeRange>("24h");
 
   useEffect(() => {
-    const fetchDashboardUrl = async () => {
+    const fetchMetrics = async () => {
       try {
         setLoading(true);
         setError(null);
-        const url = await getDashboardUrl(device.id);
-        setDashboardUrl(url);
+        const data = await readMetrics(device.id, timeRange);
+        setDataPoints(data);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load dashboard",
-        );
-        setDashboardUrl(null);
+        setError(err instanceof Error ? err.message : "Failed to load metrics");
+        setDataPoints([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardUrl();
-  }, [device.id]);
+    fetchMetrics();
+  }, [device.id, timeRange]);
 
   if (loading) {
     return (
@@ -358,7 +466,7 @@ const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
         <Stack gap="md" align="center">
           <Loader />
           <Text size="sm" c="dimmed">
-            Loading dashboard...
+            Loading metrics...
           </Text>
         </Stack>
       </Card>
@@ -373,13 +481,42 @@ const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
     );
   }
 
-  if (!dashboardUrl) {
-    return (
-      <Alert icon={<IconInfoCircle />} color="blue">
-        <Text size="sm">Dashboard URL could not be loaded.</Text>
-      </Alert>
-    );
-  }
+  // Group data by plant
+  const plantData = dataPoints.reduce(
+    (acc, point) => {
+      if (!acc[point.plantId]) {
+        acc[point.plantId] = [];
+      }
+      acc[point.plantId].push(point);
+      return {};
+    },
+    {} as Record<string, MetricDataPointResponse[]>,
+  );
+
+  // Transform for Recharts
+  const chartData = dataPoints
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((point) => ({
+      timestamp: point.timestamp,
+      [point.plantId]: point.value,
+    }));
+
+  // Merge points with same timestamp
+  const mergedData = Object.values(
+    chartData.reduce(
+      (acc, item) => {
+        const key = item.timestamp;
+        if (!acc[key]) {
+          acc[key] = { timestamp: key };
+        }
+        Object.assign(acc[key], item);
+        return acc;
+      },
+      {} as Record<number, any>,
+    ),
+  );
+
+  const plantIds = Object.keys(plantData);
 
   return (
     <Card withBorder padding="lg">
@@ -387,71 +524,90 @@ const DeviceStatsEmbedded = ({ device }: DeviceStatsEmbeddedProps) => {
         <Group justify="space-between">
           <div>
             <Text size="sm" fw={500}>
-              Device Metrics
+              Soil Moisture Levels
             </Text>
             <Text size="xs" c="dimmed">
-              Real-time monitoring
+              {device.name}
             </Text>
           </div>
-          <Anchor href={dashboardUrl} target="_blank" size="sm">
-            <Group gap="xs">
-              <span>Open Full Dashboard</span>
-              <IconExternalLink size={14} />
-            </Group>
-          </Anchor>
+          <SegmentedControl
+            value={timeRange}
+            onChange={(value) => setTimeRange(value as TimeRange)}
+            data={[
+              { label: "1h", value: "1h" },
+              { label: "6h", value: "6h" },
+              { label: "24h", value: "24h" },
+              { label: "7d", value: "7d" },
+            ]}
+          />
         </Group>
 
-        <iframe
-          src={dashboardUrl}
-          width="100%"
-          height="500"
-          style={{
-            border: "1px solid var(--mantine-color-gray-3)",
-            borderRadius: "var(--mantine-radius-md)",
-          }}
-          title={`Metrics for ${device.name}`}
-        />
+        {mergedData.length === 0 ? (
+          <Text c="dimmed" size="sm">
+            No data available for this time range.
+          </Text>
+        ) : (
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart data={mergedData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="timestamp"
+                tickFormatter={(ts) =>
+                  new Date(ts).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                }
+              />
+              <YAxis
+                label={{
+                  value: "Moisture (%)",
+                  angle: -90,
+                  position: "insideLeft",
+                }}
+                domain={[0, 100]}
+              />
+              <Tooltip
+                labelFormatter={(ts) => new Date(ts).toLocaleString()}
+                formatter={(value) => [`${value}%`, "Moisture"]}
+              />
+              <Legend />
+              {plantIds.map((plantId, index) => (
+                <Line
+                  key={plantId}
+                  type="monotone"
+                  dataKey={plantId}
+                  stroke={`hsl(${(index * 360) / plantIds.length}, 70%, 50%)`}
+                  name={`Plant ${plantId}`}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </Stack>
     </Card>
   );
 };
 
-export default DeviceStatsEmbedded;
+export default DeviceStats;
 ```
 
-#### Step 4: Integrate into Device Details Page
+#### Step 3: Integrate into Device Details Page
 
-Add to the device details page component:
+**File:** `packages/web/src/components/devices/device-detail-page.tsx` (add import and component)
 
 ```tsx
-import DeviceStatsEmbedded from "@/components/devices/device-stats-embedded";
+import DeviceStats from "./device-stats";
 
 // In your device details page JSX:
-<DeviceStatsEmbedded device={device} />;
+<DeviceStats device={device} />;
 ```
 
 ### Phase 3: Testing
 
-**Estimated Time:** 15 minutes
+**Estimated Time:** 30 minutes
 
-#### Manual Testing
-
-1. Start dev server: `cd packages/web && bun run dev`
-2. Navigate to device stats page
-3. Verify:
-   - [ ] Dashboard iframe loads
-   - [ ] Shows metrics for current device only
-   - [ ] "Open Full Dashboard" link works
-   - [ ] Multiple plants shown on same chart
-   - [ ] Appropriate error message if env var missing
-
-#### Production Testing
-
-1. Deploy to production environment
-2. Register test device via CLI
-3. Send test metrics
-4. Verify dashboard shows data after 1-2 minutes
-5. Test with multiple devices (data isolation)
+See [Testing Strategy](#testing-strategy) section for details.
 
 ---
 
