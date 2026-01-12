@@ -1,4 +1,5 @@
 import { debug, info, warn } from "@overdrip/core/logger";
+import { setTimeout } from "node:timers/promises";
 import {
   type HardwareFactory,
   type MoistureReading,
@@ -119,4 +120,5 @@ export class MockHardwareFactory implements HardwareFactory {
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number, signal: AbortSignal) =>
+  setTimeout(ms, null, { signal });

@@ -35,6 +35,11 @@ export const handleStart = async (configPath: string) => {
 
     printSuccess("Overdrip started successfully!");
   } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      printInfo("Overdrip stopped.");
+      process.exit(0);
+    }
+
     printError(
       `Failed to start Overdrip: ${err instanceof Error ? err.message : String(err)}`,
     );

@@ -11,6 +11,7 @@ export const logInUser = async (email: string, password: string) => {
       user: { uid },
     } = await signInWithEmailAndPassword(auth, email, password);
     console.log("User logged in:", uid);
+    return uid;
   } catch (error) {
     if (error instanceof FirebaseError) {
       throw new Error(

@@ -30,6 +30,7 @@ export type RegisterDeviceResponse = z.infer<
 
 export const DeviceConfigSchema = RegisterDeviceResponseSchema.extend({
   name: DeviceName,
+  userId: z.string().min(1), // Owner's user ID
   checkIntervalMs: z.number().int().positive().optional(),
 });
 
@@ -119,3 +120,20 @@ export const ReadMetricsResponseSchema = z.object({
 });
 
 export type ReadMetricsResponse = z.infer<typeof ReadMetricsResponseSchema>;
+
+// Watering config schemas
+export const PlantConfigSchema = z.object({
+  id: z.string().min(1).max(100),
+  name: z.string().min(1).max(100),
+  thresholdPercent: z.number().int().min(0).max(100),
+  wateringDurationMs: z.number().int().min(1000).max(30_000), // 1-30 seconds
+  minIntervalMs: z.number().int().min(60_000), // Min 1 minute
+});
+
+export type PlantConfig = z.infer<typeof PlantConfigSchema>;
+
+export const WateringConfigSchema = z.object({
+  plants: z.array(PlantConfigSchema).min(1).max(4),
+});
+
+export type WateringConfig = z.infer<typeof WateringConfigSchema>;

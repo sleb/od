@@ -1,6 +1,8 @@
-import { type Config } from "@overdrip/core/schemas";
 import { debug, info, setLogLevel, warn } from "@overdrip/core/logger";
 import { writeMetrics, type MetricDataPoint } from "@overdrip/core/metrics";
+import type { PlantConfig } from "@overdrip/core/schemas";
+import { type Config } from "@overdrip/core/schemas";
+import { setTimeout } from "node:timers/promises";
 import { createHardwareFactory } from "./hardware/factory";
 import {
   type HardwareFactory,
@@ -9,7 +11,6 @@ import {
 } from "./hardware/interfaces";
 import {
   createWateringConfigManager,
-  type PlantConfig,
   type WateringConfigManager,
 } from "./watering-config-manager";
 
@@ -28,9 +29,10 @@ export interface Overdrip {
   stop(): Promise<void>;
 }
 
-const DEFAULT_CHECK_INTERVAL_MS = 5_000;
+const DEFAULT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 class App implements Overdrip {
+  private abortController = new AbortController();
   private running = false;
   private stopRequested = false;
   private hardwareSlots: HardwareSlot[] = [];
@@ -78,10 +80,7 @@ class App implements Overdrip {
   }
 
   async stop() {
-    if (!this.running) {
-      return;
-    }
-
+    this.abortController.abort();
     this.stopRequested = true;
     info("Stop requested; shutting down...");
   }
@@ -92,7 +91,7 @@ class App implements Overdrip {
       const plants = this.mergeConfigWithSlots(wateringConfig.plants);
 
       await this.runCycle(plants);
-      await sleep(this.checkIntervalMs);
+      await sleep(this.checkIntervalMs, this.abortController);
     }
 
     this.running = false;
@@ -265,4 +264,5 @@ export const app = (config: Config): Overdrip => {
   return new App(config);
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const sleep = (ms: number, abortController: AbortController) =>
+  setTimeout(ms, null, { signal: abortController.signal });

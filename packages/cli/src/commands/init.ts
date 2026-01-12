@@ -1,6 +1,9 @@
+import { terminateDb } from "@overdrip/core";
 import { LocalConfigManager } from "@overdrip/core/config";
-import { logInUser } from "@overdrip/core/user";
 import { registerDevice } from "@overdrip/core/device";
+import type { Config } from "@overdrip/core/schemas";
+import { logInUser } from "@overdrip/core/user";
+import { saveWateringConfig } from "@overdrip/core/watering";
 import {
   confirmAction,
   printBanner,
@@ -10,9 +13,30 @@ import {
   promptDeviceName,
   promptEmail,
   promptPassword,
+  promptPlantConfig,
+  promptWateringApproach,
 } from "../ui";
 
 const DEFAULT_LOG_LEVEL = "info" as const;
+
+const DEFAULT_WATERING_CONFIG = {
+  plants: [
+    {
+      id: "plant-0",
+      name: "Plant 1",
+      thresholdPercent: 30,
+      wateringDurationMs: 5_000,
+      minIntervalMs: 300_000, // 5 minutes
+    },
+    {
+      id: "plant-1",
+      name: "Plant 2",
+      thresholdPercent: 30,
+      wateringDurationMs: 5_000,
+      minIntervalMs: 300_000, // 5 minutes
+    },
+  ],
+};
 
 export const handleInit = async (configPath: string) => {
   printBanner();
@@ -41,45 +65,66 @@ export const handleInit = async (configPath: string) => {
     const email = await promptEmail();
     const password = await promptPassword();
 
-    try {
-      await logInUser(email, password);
-      printSuccess("User authentication successful!");
-    } catch (err) {
-      printError(
-        `Authentication failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      throw err;
-    }
+    let userId = await logInUser(email, password);
+    printSuccess("User authentication successful!");
 
     // Register device
     printWarning("Registering device...");
-    let existingDeviceName: string | undefined;
-    if (configExists) {
-      try {
-        const oldConfig = await configManager.loadConfig();
-        existingDeviceName = oldConfig.device?.name;
-      } catch {
-        // Ignore error, will use default
+    const previousConfig = await getPreviousConfig(configPath);
+    const deviceName = await promptDeviceName(previousConfig?.device?.name);
+
+    let device = await registerDevice(deviceName);
+    await configManager.saveConfig({
+      device: { ...device, userId, name: deviceName },
+      logLevel: DEFAULT_LOG_LEVEL,
+    });
+    printSuccess("Device registered successfully!");
+    printSuccess(`Configuration saved to: ${configManager.path()}`);
+
+    // Configure watering settings
+    printWarning("\nConfiguring watering settings...");
+    const wateringApproach = await promptWateringApproach();
+
+    let wateringConfig = DEFAULT_WATERING_CONFIG;
+
+    if (wateringApproach === "custom") {
+      const customPlants = [];
+      for (let i = 0; i < 2; i++) {
+        const plantConfig = await promptPlantConfig(i);
+        customPlants.push({
+          id: `plant-${i}`,
+          name: `Plant ${i + 1}`,
+          thresholdPercent: plantConfig.thresholdPercent,
+          wateringDurationMs: plantConfig.wateringDurationSeconds * 1000,
+          minIntervalMs: plantConfig.minIntervalMinutes * 60 * 1000,
+        });
       }
+      wateringConfig = { plants: customPlants };
     }
 
-    const deviceName = await promptDeviceName(existingDeviceName);
-
-    try {
-      const device = await registerDevice(deviceName);
-      await configManager.saveConfig({ device, logLevel: DEFAULT_LOG_LEVEL });
-      printSuccess("Device registered successfully!");
-      printSuccess(`Configuration saved to: ${configManager.path()}`);
-    } catch (err) {
-      printError(
-        `Device registration failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      throw err;
-    }
+    await saveWateringConfig(userId, device.id, wateringConfig);
+    printSuccess("Watering configuration saved!");
   } catch (err) {
     printError(
       `Initialization failed: ${err instanceof Error ? err.message : String(err)}`,
     );
-    process.exit(1);
+  } finally {
+    terminateDb();
+  }
+};
+
+const getPreviousConfig = async (path: string): Promise<Config | null> => {
+  const configManager = new LocalConfigManager(path);
+  const configExists = await configManager.configExists();
+  if (!configExists) {
+    return null;
+  }
+
+  try {
+    return await configManager.loadConfig();
+  } catch (err) {
+    throw new Error(
+      `Failed to load existing config: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 };

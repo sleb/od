@@ -3,6 +3,10 @@
   "type": "module",
   "license": "MIT",
   "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
     "./config": {
       "import": "./src/config.ts",
       "types": "./src/config.ts"
@@ -30,6 +34,10 @@
     "./metrics": {
       "import": "./src/metrics.ts",
       "types": "./src/metrics.ts"
+    },
+    "./watering": {
+      "import": "./src/watering.ts",
+      "types": "./src/watering.ts"
     }
   },
   "devDependencies": {

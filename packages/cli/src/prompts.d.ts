@@ -1,20 +1,23 @@
 declare module "prompts" {
-  interface PromptObject {
+  export interface PromptObject {
     type: string;
     name: string;
     message: string;
-    initial?: string | boolean;
+    initial?: string | boolean | number;
     validate?: (value: string) => boolean | string;
     mask?: string;
+    choices?: Array<{
+      title: string;
+      value: string | number | boolean;
+      description?: string;
+    }>;
   }
 
-  interface PromptResponse {
-    [key: string]: string | boolean;
+  export interface PromptResponse {
+    [key: string]: string | boolean | number | undefined;
   }
 
-  function prompts(
+  export default function prompts(
     questions: PromptObject | PromptObject[],
   ): Promise<PromptResponse>;
-
-  export default prompts;
 }

@@ -38,7 +38,9 @@ export const logInDevice = async (
   }
 };
 
-export const registerDevice = async (name: string): Promise<DeviceConfig> => {
+export const registerDevice = async (
+  name: string,
+): Promise<RegisterDeviceResponse> => {
   const registerDeviceCallable = httpsCallable<
     RegisterDeviceRequest,
     RegisterDeviceResponse
@@ -47,7 +49,7 @@ export const registerDevice = async (name: string): Promise<DeviceConfig> => {
   try {
     const request = RegisterDeviceRequestSchema.parse({ name });
     const result = await registerDeviceCallable(request);
-    return { ...RegisterDeviceResponseSchema.parse(result.data), name };
+    return RegisterDeviceResponseSchema.parse(result.data);
   } catch (error) {
     throw new Error(`Failed to register device: ${error}`);
   }
@@ -139,7 +141,10 @@ export const subscribeToDevice = (
     (snapshot) => {
       const foundDevice = snapshot.docs.find((doc) => doc.id === deviceId);
       if (foundDevice) {
-        onDevice({ ...foundDevice.data(), id: foundDevice.id } as DeviceRegistration);
+        onDevice({
+          ...foundDevice.data(),
+          id: foundDevice.id,
+        } as DeviceRegistration);
       } else {
         onDevice(null);
       }
